@@ -140,7 +140,7 @@ def get_corpus_info(treebank: Dict) -> Tuple[int, int]:
     tokens = len([token for v in treebank.values() for token in v.keys()]) # Count tokens 20-21 token as two
     return sentences, tokens
 
-def get_patterns_info(treebank_idx: int, treebank: Dict, P1 : str) -> Tuple[list[Dict], Dict[str, Set]]:
+def get_patterns_info(treebank_idx: int, treebank: Dict, P1 : str) -> Tuple[List[Dict], Dict[str, Set]]:
     """
     Get P1 matchs and the nodes associated with each of its features.
     """
