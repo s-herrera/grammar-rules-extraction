@@ -35,14 +35,14 @@ source .venv/bin/activate
 ```bash
 pip3 install -U -r requirements.txt
 ```
+This program was developed in a python 3.8 environment
+
 
 4. Run the app.
 
 ```python
 python3 -m streamlit run Extraction_App.py
 ```
-
-This program was developed in a python 3.8 environment.   
 
 ## Contributing
 For any problem or suggestion, posting issues is welcome.
