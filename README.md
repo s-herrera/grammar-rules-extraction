@@ -42,6 +42,8 @@ pip3 install -U -r requirements.txt
 python3 -m streamlit run Extraction_App.py
 ```
 
+This program was developed in a python 3.8 environment.   
+
 ## Contributing
 For any problem or suggestion, posting issues is welcome.
 
