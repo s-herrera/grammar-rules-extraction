@@ -218,7 +218,7 @@ def rules_extraction(treebank_idx : int, patterns : Dict, P1 : GrewPattern, P2: 
     res = []
 
     for i, pat in enumerate(patterns, start=1):
-        print(pat)
+
         my_bar.progress(i/len(patterns))
 
         # if it's a dict it has key pattern, on the contrary, it's a simple pattern
