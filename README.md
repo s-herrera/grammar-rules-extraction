@@ -23,14 +23,16 @@ git clone https://github.com/santiagohy/grammar-rules-extraction.git
 cd grammar-rules-extraction
 ```
 
-2. Create a virtual environment in which to run the app.
+2. Follow the [instructions up to the _Step 3_](https://grew.fr/usage/install/) to install grew and grewpy 
+
+3. Create a virtual environment in which to run the app.
 
 ```bash
 python3 -m virtualenv .venv
 source .venv/bin/activate
 ```
 
-3. Install the dependencies.
+4. Install the dependencies.
 
 ```bash
 pip3 install -U -r requirements.txt
@@ -38,7 +40,7 @@ pip3 install -U -r requirements.txt
 This program was developed in a python 3.8 environment
 
 
-4. Run the app.
+5. Run the app.
 
 ```python
 python3 -m streamlit run Extraction_App.py
