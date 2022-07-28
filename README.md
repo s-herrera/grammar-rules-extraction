@@ -25,6 +25,35 @@ cd grammar-rules-extraction
 
 2. Follow this [instructions up to the _Step 3_](https://grew.fr/usage/install/) to install grew and grewpy after running `apt-get update && upgrade`
 
+    - **Linux**
+
+      ```bash
+      sudo apt-get update && upgrade
+      sudo apt-get install opam
+      sudo apt-get install wget m4 unzip librsvg2-bin curl bubblewrap
+      opam init
+      opam switch create 4.13.1 4.13.1
+      eval $(opam env --switch=4.13.1)
+      opam remote add grew "http://opam.grew.fr"
+      opam install grew grewpy
+      ```
+
+    - **Mac OS X**
+
+      - Install [XCode](https://developer.apple.com/xcode/)
+
+      - Install [Brew](https://brew.sh/)
+
+      ```
+      brew install aspcud
+      brew install opam
+         opam init
+      opam switch create 4.13.1 4.13.1
+      eval $(opam env --switch=4.13.1)
+      opam remote add grew "http://opam.grew.fr"
+      opam install grew grewpy
+      ```
+
 3. Create a virtual environment in which to run the app.
 
 ```bash
@@ -32,12 +61,12 @@ python3 -m virtualenv .venv
 source .venv/bin/activate
 ```
 
-4. Install the dependencies.
+4. Install python dependencies.
 
 ```bash
 pip3 install -U -r requirements.txt
 ```
-This program was developed in a python 3.8 environment
+  - This program was tested in python 3.8+ environments.
 
 
 5. Run the app.
