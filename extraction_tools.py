@@ -249,9 +249,11 @@ def rules_extraction(treebank_idx : int, patterns : Dict, P1 : GrewPattern, P2: 
 
 
 def get_significant_subsets(res : list):
+    """
+    Filter the results to obtain the most significant sub-patterns
+    """
 
     res_sorted_len = sorted(res, key = lambda x: len(x[0]))
-    # On filtre les résultats pour garder les motifs et sous-motifs plus significatifs
 
     subsets, visited = set(), set()
 
@@ -274,4 +276,5 @@ def get_significant_subsets(res : list):
                     visited.add(xpat)
         subsets.update(to_keep)
     subsets.difference_update(visited)
+    
     return subsets
