@@ -47,7 +47,7 @@ cd grammar-rules-extraction
       ```
       brew install aspcud
       brew install opam
-         opam init
+      opam init
       opam switch create 4.13.1 4.13.1
       eval $(opam env --switch=4.13.1)
       opam remote add grew "http://opam.grew.fr"
