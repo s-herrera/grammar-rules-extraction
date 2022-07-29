@@ -1,5 +1,0 @@
-opam
-echo 'opam init'
-echo 'opam switch create 4.13.1 4.13.1'
-echo 'opam remote add grew "http://opam.grew.fr"'
-echo 'opam install grew grewpy'
