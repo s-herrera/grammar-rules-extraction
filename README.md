@@ -28,9 +28,9 @@ cd grammar-rules-extraction
     - **Linux**
 
       ```bash
-      sudo apt-get update && upgrade
-      sudo apt-get install opam
-      sudo apt-get install wget m4 unzip librsvg2-bin curl bubblewrap
+      sudo apt update && sudo apt upgrade
+      sudo apt install opam
+      sudo apt install wget m4 unzip librsvg2-bin curl bubblewrap
       opam init
       opam switch create 4.13.1 4.13.1
       eval $(opam env --switch=4.13.1)
