@@ -140,7 +140,7 @@ def get_corpus_info(treebank: Dict) -> Tuple[int, int]:
     tokens = len([token for v in treebank.values() for token in v.keys()]) # Count tokens 20-21 token as two
     return sentences, tokens
 
-def get_patterns_info(treebank_idx: int, treebank: Dict, P1 : str) -> Tuple[list[Dict], Dict[str, Set]]:
+def get_patterns_info(treebank_idx: int, treebank: Dict, P1 : str) -> Tuple[List[Dict], Dict[str, Set]]:
     """
     Get P1 matchs and the nodes associated with each of its features.
     """
@@ -218,7 +218,7 @@ def rules_extraction(treebank_idx : int, patterns : Dict, P1 : GrewPattern, P2: 
     res = []
 
     for i, pat in enumerate(patterns, start=1):
-        print(pat)
+
         my_bar.progress(i/len(patterns))
 
         # if it's a dict it has key pattern, on the contrary, it's a simple pattern
@@ -249,9 +249,11 @@ def rules_extraction(treebank_idx : int, patterns : Dict, P1 : GrewPattern, P2: 
 
 
 def get_significant_subsets(res : list):
+    """
+    Filter the results to obtain the most significant sub-patterns
+    """
 
     res_sorted_len = sorted(res, key = lambda x: len(x[0]))
-    # On filtre les résultats pour garder les motifs et sous-motifs plus significatifs
 
     subsets, visited = set(), set()
 
@@ -274,4 +276,5 @@ def get_significant_subsets(res : list):
                     visited.add(xpat)
         subsets.update(to_keep)
     subsets.difference_update(visited)
+    
     return subsets
