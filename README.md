@@ -23,7 +23,7 @@ git clone https://github.com/santiagohy/grammar-rules-extraction.git
 cd grammar-rules-extraction
 ```
 
-2. Follow this [instructions up to the _Step 3_](https://grew.fr/usage/install/) to install grew and grewpy after running `apt-get update && upgrade`
+2. Follow this [instructions up to the _Step 3_](https://grew.fr/usage/install/) to install grew and grewpy after running `sudo apt update && sudo apt upgrade` or just run the following lines.
 
     - **Linux**
 
