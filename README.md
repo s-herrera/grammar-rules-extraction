@@ -23,14 +23,14 @@ git clone https://github.com/santiagohy/grammar-rules-extraction.git
 cd grammar-rules-extraction
 ```
 
-2. Follow this [instructions up to the _Step 3_](https://grew.fr/usage/install/) to install grew and grewpy after running `apt-get update && upgrade`
+2. Follow this [instructions up to the _Step 3_](https://grew.fr/usage/install/) to install **grew** and **grewpy** after running `sudo apt update && sudo apt upgrade` or just run the next lines.
 
     - **Linux**
 
       ```bash
-      sudo apt-get update && upgrade
-      sudo apt-get install opam
-      sudo apt-get install wget m4 unzip librsvg2-bin curl bubblewrap
+      sudo apt update && sudo apt upgrade
+      sudo apt install opam
+      sudo apt install wget m4 unzip librsvg2-bin curl bubblewrap
       opam init
       opam switch create 4.13.1 4.13.1
       eval $(opam env --switch=4.13.1)
