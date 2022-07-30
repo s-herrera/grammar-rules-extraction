@@ -293,14 +293,6 @@ if uploaded_files:
                         mime='text/csv',
                     )
             st.markdown("***")
-            def v_spacer(height, sb=False) -> None:
-                for _ in range(height):
-                    if sb:
-                        st.sidebar.write('\n')
-                    else:
-                        st.write('\n')
-
-            v_spacer(height=3, sb=True)
 
         else:
             st.info("No significant patterns")
