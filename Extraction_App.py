@@ -5,7 +5,6 @@ import pandas as pd
 import tempfile
 from typing import Tuple, Dict
 from collections import namedtuple
-import re
 
 # -----------------------------------------
 
@@ -35,6 +34,13 @@ def convert_df(df):
     tsv = df.to_csv(index=False, encoding = "utf-8", sep="\t")
     return jsn, tsv
 
+def get_dataframe(lst : list) -> pd.DataFrame:
+    df = pd.DataFrame(lst, columns=["Pattern", "Significance", "Probability ratio", "# P2&P3", "% of P1&P2", "% of P1&P3"])
+    df['Significance'] = df['Significance'].apply(lambda x: et.format_significance(x))
+    df = df.sort_values('Significance', ascending=False)
+    style_df = df.style.format({"% of P1&P2": "{:.4}", "% of P1&P3": "{:.4}", "Probability ratio" : "{:.4}"})
+    return style_df
+
 def del_all_session_keys(excepts : list):
     for key in st.session_state.keys():
         if key not in excepts:
@@ -47,18 +53,9 @@ def del_all_session_keys(excepts : list):
 # Information after P1&P2 in expander
 # FIX title
 
-st.set_page_config(
-    page_title="Rules extraction", page_icon="📐", initial_sidebar_state="expanded",
-    # menu_items={
-    #     'Get Help': '',
-    #     'Report a bug': ",
-    #     'About': "# This is a header. This is an *extremely* cool app!"},
-    #layout="wide"
-)
-
 def _max_width_():
     # Change size of container. This could change every streamlit update
-    max_width_str = f"max-width: 925px;"
+    max_width_str = f"max-width: 1200px;"
     st.markdown(
         f"""
     <style>
@@ -70,7 +67,33 @@ def _max_width_():
         unsafe_allow_html=True,
     )
 
+
+st.set_page_config(
+    page_title="Rules extraction", page_icon="📐", initial_sidebar_state="expanded",
+    # menu_items={
+    #     'Get Help': '',
+    #     'Report a bug': ",
+    #     'About': "# This is a header. This is an *extremely* cool app!"},
+    #layout="wide"
+)
+
 _max_width_()
+
+hide_menu_style = """
+        <style>
+            footer {visibility: hidden;}
+        </style>
+        """
+st.markdown(hide_menu_style, unsafe_allow_html=True)
+
+# hide_menu_style = """
+#         <style>
+#         #MainMenu {visibility: hidden;}
+#           footer {visibility: hidden;}
+#         </style>
+#         """
+# st.markdown(hide_menu_style, unsafe_allow_html=True)
+
 
 st.write(
     """
@@ -85,6 +108,11 @@ grew.init()
 
 if "res" not in st.session_state.keys():
     st.session_state["res"] = []
+
+corpora = et.get_GrewMatch_corpora()
+
+pd.options.display.max_colwidth = 5000
+
 
 # Useful links
 
@@ -124,7 +152,7 @@ if uploaded_files:
     with col2:  
         col2.metric("# Sentences", sentences)
     with col3:
-        col3.metric("# Tokens", tokens, help="Tokens such as 20-21 count as two")
+        col3.metric("# Tokens", tokens, help="It includes multiword tokens (e.g. n-n+1 indexed tokens)")
 
     # Form2
     
@@ -137,7 +165,7 @@ if uploaded_files:
 
         P1grew = et.build_GrewPattern(P1)
         P2grew = et.build_GrewPattern(P2)
-        
+
         submitted2 = st.form_submit_button("Match")
         
         if submitted2:
@@ -149,9 +177,9 @@ if uploaded_files:
                 st.session_state["n"] = n
                 st.session_state["matchs"] = matchs
                 st.session_state["features"] = features
-
-                if 'res' in st.session_state.keys():
-                    st.session_state['res'] = []
+                
+                # if 'res' in st.session_state.keys():
+                #     st.session_state['res'] = []
             else:
                 st.info("Complete both patterns!")
 
@@ -162,7 +190,7 @@ if uploaded_files:
 
         col1, col2 = st.columns([1.3,2])
         with col1:
-            st.caption("### Features of P1 nodes:")
+            st.caption("### Features of P1's nodes:")
             st.json(st.session_state['features'], expanded=False)
         with col2:
             df = pd.DataFrame({"pattern 2" : [n], " ¬ pattern 2" : [M-n], " total" : [M]}, index=["pattern 1"])
@@ -185,97 +213,94 @@ if uploaded_files:
 
             if submitted3:
                 if P3:
-                
-                    # if combination_type:
-                    #     st.warning("This could take a while...")
-
-                    key_predictors = et.get_key_predictors(P1, P3)
+                    key_predictors = et.get_key_predictors(P1, P3, st.session_state['features'])
                     st.session_state['keys'] = bool(key_predictors)
-
                     patterns = et.get_patterns(treebank, st.session_state["matchs"], P3, key_predictors, combination_type)
                     res = et.rules_extraction(treebank_idx, patterns, P1grew, P2grew, st.session_state["M"], st.session_state["n"])
                     st.session_state['res'] = res
+
                 else:
-                    st.info("Complete the pattern")
+                    st.warning("Complete the pattern")
 
 
         if st.session_state['res']:
-
+            st.subheader("")    
             if combination_type: 
                 checkbox = st.checkbox("Get only the most significant subsets", value=False, key=None, help=None, on_change=None, args=None, kwargs=None, disabled=False)
                 if checkbox:
                     subsets = et.get_significant_subsets(st.session_state['res'])
                     res = [r for sset in subsets for r in st.session_state['res'] if sset in r]
-                    res_df = pd.DataFrame(res, columns=["Pattern", "Significance", "Probability ratio", "# P2&P3", "% of P1&P2", "% of P1&P3"])
-                    st.dataframe(res_df, width=925)
+                    style_df = get_dataframe(res)
+                    st.dataframe(style_df)
                 else:
-                    res_df = pd.DataFrame(st.session_state['res'], columns=["Pattern", "Significance", "Probability ratio", "# P2&P3", "% of P1&P2", "% of P1&P3"])
-                    st.dataframe(res_df, width=925)
+                    style_df = get_dataframe(st.session_state['res'])
+                    st.dataframe(style_df)
             else:
-                res_df = pd.DataFrame(st.session_state['res'], columns=["Pattern", "Significance", "Probability ratio", "# P2&P3", "% of P1&P2", "% of P1&P3"])
-                #res_df = pd.DataFrame(st.session_state['res'])
-                #res_df.style.set_properties(subset=['Pattern'], **{'width': '600px'})
-                st.dataframe(res_df, width=925)
+                style_df = get_dataframe(st.session_state['res'])
+                st.dataframe(style_df)
 
-
-            # with col3:
-            #     st.download_button(
-            #         label="Download data as TXT",
-            #         data=tsv,
-            #         file_name='results.txt',
-            #         mime='text',
-            #     )
-
-
-            res_lst = res_df['Pattern'].to_list()
+            res_lst = style_df.data['Pattern'].to_list()
             res_lst.insert(0, '')
+            st.markdown("***")
+            col1, col2, col3, col4 = st.columns([1.3,1.1,1.1,1])
+            with col1:
+                st.markdown("")
+                st.markdown("")
+                st.subheader("Grew-match link ➡️")
+            with col2:
+                corpus = st.selectbox('Select the corpus :', corpora)
+            with col3:
+                choice = st.selectbox('Choose the pattern:', res_lst, index=0)
+            with col4:
 
-            option = st.selectbox(
-                'Create a Grew-match link for the chosen pattern:',
-                res_lst, index=0)
-            if option:
-                corpus = filenames[0].split(".")[0]
-
+                if corpus and choice:
                 # because keys patterns doesn't have the string "patterns {}". It's necessary to make the difference
-                if st.session_state['keys']:
-                    P3grew = et.build_GrewPattern(f"pattern {{ {option} }}")
+                    if st.session_state['keys']:
+                        P3grew = et.build_GrewPattern(f"pattern {{ {choice} }}")
+                    else:
+                        P3grew = et.build_GrewPattern(choice)
+                
+                    link = et.get_Grewmatch_link(corpus, P1grew, P2grew, P3grew)
+                    st.markdown("")
+                    st.markdown(f'## 🔗 [link]({link})')
                 else:
-                    P3grew = et.build_GrewPattern(option)
-                
-                link = et.get_Grewmatch_link(corpus, P1grew, P2grew, P3grew)
-                st.info("The upload file name is used to query the corpus in Grew-match. It's possible that the selected corpus is not the correct one.")
-                st.markdown(f'🔗[Grew-match link]({link})')
+                    st.markdown("")
+                    st.markdown("")
+                    st.markdown("")
+            st.markdown("***")
+            jsn, tsv = convert_df(style_df.data)
+            col1, col2, col3, col4 = st.columns([1.1,0.3,0.8,1])
+            with col1:
+                st.markdown("")
+                st.markdown("")
+                st.subheader("Download results ⬇️")
+            with col3:
+                st.markdown("")
+                st.subheader("")
+                st.download_button(
+                        label="Download as JSON",
+                        data=jsn,
+                        file_name='results.json',
+                        mime='text/json',
+                    )
+            with col4:
+                st.markdown("")
+                st.subheader("")
+                st.download_button(
+                        label="Download as TSV",
+                        data=tsv,
+                        file_name='results.tsv',
+                        mime='text/csv',
+                    )
+            st.markdown("***")
+            def v_spacer(height, sb=False) -> None:
+                for _ in range(height):
+                    if sb:
+                        st.sidebar.write('\n')
+                    else:
+                        st.write('\n')
 
-            jsn, tsv = convert_df(res_df)
-            
-            st.download_button(
-                    label="Download as JSON",
-                    data=jsn,
-                    file_name='results.json',
-                    mime='text/json',
-                )
-
-            st.download_button(
-                    label="Download as TSV",
-                    data=tsv,
-                    file_name='results.tsv',
-                    mime='text/csv',
-                )
-
-                # P3grew = et.build_GrewPattern(f"pattern {{ {option} }}")
-                # P2whether = re.sub(r"without|pattern|global|{|}", "", et.grewPattern_to_string(P2grew))
-                
-                # enc_corpus = urllib.parse.quote(filenames[0].split(".")[0].encode('utf8'))
-                # enc_pattern = urllib.parse.quote(et.grewPattern_to_string(P1grew, P3grew).encode('utf8'))
-                # enc_whether = urllib.parse.quote(P2whether.strip().encode('utf-8'))
-                
-                # st.write(f"http://universal.grew.fr/?corpus={enc_corpus}&pattern={enc_pattern}&whether={enc_whether}")
-                # print(enc_pattern)
-                # print(enc_whether)
+            v_spacer(height=3, sb=True)
 
         else:
-            res_df = pd.DataFrame([], columns=["Pattern", "Significance", "Probability ratio", "# P2&P3", "% of P1&P2", "% of P1&P3"])
-            #res_df.style.set_properties(subset=['Pattern'], **{'width': '600px'})
-            #res_df.style.set_properties({'width': '300px'})
-            st.dataframe(res_df)
-
+            st.info("No significant patterns")

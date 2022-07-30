@@ -1,4 +1,4 @@
-import re, time
+import re, urllib, time
 import streamlit as st
 import numpy as np
 import grew
@@ -6,8 +6,8 @@ from collections import defaultdict, Counter, namedtuple
 from itertools import combinations, chain
 from typing import Dict, Iterable, List, Tuple, Set
 from scipy.stats import fisher_exact
-import urllib
-
+import requests
+from bs4 import BeautifulSoup
 # -------------- Fonctions --------------
 
 GrewPattern = namedtuple('GrewPattern', 'pattern without global_')
@@ -25,13 +25,11 @@ def conllu_to_dict(path : str) -> Dict:
             if line.startswith("#"):
                 if "sent_id" in line:
                     sent_id = line.split("=")[1].strip()
-                    trees[sent_id] = {'0' : {"form" : "None", "lemma" : "None", "upos" : "None", "head" : "None", "deprel" : "None"} }
+                    trees[sent_id] = {'0' : {"form" : "None", "lemma" : "None", "upos" : "None", "xpos": "None", "head" : "None", "deprel" : "None"} }
             else:
                 token_id, form, lemma, upos, xpos, feats, head, deprel, deps, misc = line.split("\t")
                 if "-" not in token_id:
-                    trees[sent_id][token_id] = {"form" : form, "lemma" : lemma, "upos" : upos, "head" : head, "deprel" : deprel}
-                    if xpos != "_":
-                        trees[sent_id][token_id].update(separate_column_values(xpos))
+                    trees[sent_id][token_id] = {"form" : form, "lemma" : lemma, "upos" : upos, 'xpos' : xpos, "head" : head, "deprel" : deprel}
                     if feats != "_":
                         trees[sent_id][token_id].update(separate_column_values(feats))
                     if deps != "_":
@@ -47,6 +45,19 @@ def separate_column_values(s : str) -> Dict:
     values = [v.split("=") for v in s.split("|")]
     values_dict = {lst[0]:lst[1] for lst in values}
     return values_dict
+
+def get_GrewMatch_corpora():
+
+    SUD = 'https://surfacesyntacticud.github.io/data/'
+
+    req = requests.get(SUD)
+    soup = BeautifulSoup(req.content, 'html.parser')
+    res = [""]
+    for tag in soup.find_all(href=re.compile("corpus")):
+        corpusSUD = re.search(r'\?corpus=(.+?)"', str(tag)).group(1)
+        corpusUD = re.sub('SUD', 'UD', corpusSUD)
+        res.extend([corpusSUD, corpusUD])
+    return res
 
 def build_GrewPattern(s : str) -> GrewPattern:
     """
@@ -149,27 +160,38 @@ def get_patterns_info(treebank_idx: int, treebank: Dict, P1 : str) -> Tuple[List
     for m in matchs:
         for node, idx in m["matching"]["nodes"].items():
             res[node].update(k for k in treebank[m["sent_id"]][idx].keys() if k not in ("head", "deprel"))
-    return matchs, {k : sorted(v) for k, v in res.items()}
+    features = {k : sorted(v) for k, v in res.items()}
+    return matchs, features
 
 def compute_fixed_totals(matchs, P1, P2, treebank_idx):
     """
     Compute fixed totals of a contengcy table. M = P1 occurrences. n = P2 occurrences.
     """
     M = len([m for m in matchs])
+    print(grewPattern_to_string(P1, P2))
     n = grew.corpus_count(pattern = grewPattern_to_string(P1, P2), corpus_index = treebank_idx)
+    print(n)
     return M, n
 
-def get_key_predictors(P1: str, P3: str) -> Dict[str, list]:
+def get_key_predictors(P1: str, P3: str, features : dict) -> Dict[str, list]:
     """
     Get node : [key predictors] (key patterns) in a dictionary. The script doesn't accept mixed querys (with and without keys).
     """
     key_predictors = defaultdict(list)
+
+    st.session_state['pattern_len'] = len(P3.split(';'))
+
     for pat in P3.split(';'):
+
         if re.search(r'^.+?\.\w+?$', pat):
             k, v = pat.strip().split(".")
             if "label" in v:
                 re_match = re.search(fr"{k}\s*:\s*(\w+?)->(\w+?)", P1)
                 key_predictors[re_match.group(2)].append(["deprel", {"head" : re_match.group(1), "dep" : re_match.group(2)}])
+            elif "AnyFeat" in v:
+                node_pat = re.findall(fr"{k}\[.+?\]", P1)
+                node_feats = re.findall(r"\w+(?==\w+)", " ".join(node_pat))
+                key_predictors[k].extend([x for x in features[k] if x not in ("lemma", "form", "CorrectForm", "wordform", "SpaceAfter", "xpos", *node_feats)])
             else:
                 key_predictors[k].append(v)
     return dict(key_predictors)
@@ -185,9 +207,7 @@ def get_patterns(treebank : Dict, matchs : Dict , P3 : str, key_predictors : Dic
             patterns = [P3]
         return patterns
 
-    pattern_len = sum([len(v) for v in key_predictors.values()])
-
-    res = []
+    counter = Counter()
     for m in matchs:
         lst = []
         for node, idx in m["matching"]["nodes"].items():
@@ -201,13 +221,13 @@ def get_patterns(treebank : Dict, matchs : Dict , P3 : str, key_predictors : Dic
                         # pattern Node[feature=value]
                         pat = f'{node}[{pred}="{treebank[m["sent_id"]][idx][pred]}"]'
                         lst.append(pat)
-        if option:
-            res.extend(["; ".join(v) for v in powerset(lst) if v])
-        if not option and len(lst) == pattern_len:
-            res.append("; ".join(lst))
-
-    patterns = Counter(res)
-    return dict(patterns)
+        counter.update([x for x in powerset(lst)])
+    if not option:
+        patterns = {k: v for k, v in counter.items() if len(k) == st.session_state['pattern_len']}
+        return patterns
+    
+    patterns = dict(counter)
+    return patterns
 
 def rules_extraction(treebank_idx : int, patterns : Dict, P1 : GrewPattern, P2: GrewPattern, M : int, n : int) -> List[List]:
 
@@ -224,6 +244,7 @@ def rules_extraction(treebank_idx : int, patterns : Dict, P1 : GrewPattern, P2: 
         # if it's a dict it has key pattern, on the contrary, it's a simple pattern
         if isinstance(patterns, dict):
             N = patterns[pat]
+            pat = '; '.join(pat)
             P3 = build_GrewPattern(f"pattern {{ {pat} }}")
         else:
             P3 = build_GrewPattern(pat)
@@ -237,11 +258,15 @@ def rules_extraction(treebank_idx : int, patterns : Dict, P1 : GrewPattern, P2: 
         table = np.array([[k, n-k], [N-k, M - (n + N) + k]])
         _, p_value = fisher_exact(table = table, alternative='greater')
         if p_value < 0.01:
-            significance = format_significance(p_value)
-            percent_M1M2 = round((k/n)*100, 3)
-            percent_M1M3 = round((k/N)*100, 3)
-            probability_ratio = round((k/N)/((n-k)/(M-N)), 3)
-            res.append([pat, significance, probability_ratio, k, percent_M1M2, percent_M1M3])
+            #significance = format_significance(p_value)
+            percent_M1M2 = round((k/n)*100, 2)
+            percent_M1M3 = round((k/N)*100, 2)
+            # bad solution
+            if n-k == 0: # ZeroDivisionError
+                probability_ratio = round((k/N)/((1)/(M-N)), 3)
+            else:
+                probability_ratio = round((k/N)/((n-k)/(M-N)), 3)
+            res.append([pat, p_value, probability_ratio, k, percent_M1M2, percent_M1M3])
 
     end = time.time()
     st.write(f"Time: {round(end - start, 3)}")
@@ -256,25 +281,25 @@ def get_significant_subsets(res : list):
     res_sorted_len = sorted(res, key = lambda x: len(x[0]))
 
     subsets, visited = set(), set()
-
+    
     for res in res_sorted_len:
         to_keep = set()
-        pat, pvalue, PR, _, _, _ = res
+        ipattern, ipvalue, iPR, _, _, _ = res
         for xres in res_sorted_len:
-            if set(pat).issubset(set(xres[0])):
-                xpat, xpvalue, xPR, _, _, _ = xres
-                if xpvalue < pvalue:
-                    to_keep.add(xpat)
-                elif xpvalue == pvalue and xPR > PR:
-                    to_keep.add(xpat)
-                elif xpvalue == pvalue and xPR == PR:
-                    if pat != xpat:
-                        visited.add(xpat)
+            if set(ipattern).issubset(set(xres[0])):
+                jpattern, jpvalue, jPR, _, _, _ = xres
+                if jpvalue < ipvalue:
+                    to_keep.add(jpattern)
+                elif jpvalue == ipvalue and jPR > iPR:
+                    to_keep.add(jpattern)
+                elif jpvalue == ipvalue and jPR == iPR:
+                    if ipattern != jpattern:
+                        visited.add(jpattern)
                     else:
-                        to_keep.add(pat)
+                        to_keep.add(ipattern)
                 else:
-                    visited.add(xpat)
+                    visited.add(jpattern)
         subsets.update(to_keep)
     subsets.difference_update(visited)
-    
+
     return subsets
