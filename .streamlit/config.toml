@@ -2,4 +2,4 @@
 dataFrameSerialization = "arrow"
 [browser]
 gatherUsageStats = false
-serverAddress = 'rules'
+serverAddress = "whataname"
