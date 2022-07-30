@@ -2,4 +2,3 @@
 dataFrameSerialization = "arrow"
 [browser]
 gatherUsageStats = false
-serverAddress = 'rules_extraction'
