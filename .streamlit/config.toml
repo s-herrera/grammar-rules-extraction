@@ -2,6 +2,3 @@
 dataFrameSerialization = "arrow"
 [browser]
 gatherUsageStats = false
-serverAddress = 'extra'
-[server]
-baseUrlPath = 'app-rules'
