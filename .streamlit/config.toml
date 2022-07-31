@@ -2,3 +2,5 @@
 dataFrameSerialization = "arrow"
 [browser]
 gatherUsageStats = false
+[server]
+maxUploadFile = 10
