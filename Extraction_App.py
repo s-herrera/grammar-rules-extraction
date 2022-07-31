@@ -5,21 +5,22 @@ import pandas as pd
 import tempfile
 from typing import Tuple, Dict
 from collections import namedtuple
-
+from io import StringIO
 # -----------------------------------------
 
-@st.experimental_memo(show_spinner=False)
-def load_corpora(filenames: str) -> Tuple[Dict, int, int, int]:
+@st.experimental_memo(show_spinner=False, persist='disk')
+def load_corpora(files: dict) -> Tuple[Dict, int, int, int]:
     """
     Load corpus in a dictionary and by using Grew. Return corpora and its number of sentences and tokens.
     """
-    # Variable 'filenames' is used to check if the upload files have changed
+    # Variable 'files' is used to check if the upload files have changed
     with st.spinner('Loading treebank...'):
-
         with tempfile.NamedTemporaryFile(mode="wt", encoding="utf-8") as temp:
             for uploaded_file in st.session_state['upload_files']:
-                temp.write(uploaded_file.getvalue().decode("utf-8"))
-
+                f = uploaded_file.getvalue().decode("utf-8")
+                for line in f:
+                    temp.write(line)
+            temp.seek(0)
             treebank_idx = grew.corpus(temp.name)
             treebank = et.conllu_to_dict(temp.name)
             sentences, tokens = et.get_corpus_info(treebank)
@@ -132,23 +133,25 @@ with st.sidebar:
 with st.form("form1"):
 
     uploaded_files = st.file_uploader("CoNLL/CoNLL-U accepted", type=[".conll", ".conllu"], accept_multiple_files=True, key="upload_files")
-    filenames = [f.name for f in uploaded_files]
+    files = {f.name : {'size' : f.size} for f in uploaded_files}
 
     submitted1 = st.form_submit_button("Upload")
-    if submitted1:
-        del_all_session_keys(["upload_files"])
 
+    if submitted1:
+        del_all_session_keys(excepts = ["upload_files"])
+        load_corpora.clear()
+        
     if not uploaded_files:
         st.info("Upload your files")
         st.stop()
 
-    treebank, treebank_idx, sentences, tokens = load_corpora(filenames)
+    treebank, treebank_idx, sentences, tokens = load_corpora(files)
 
 if uploaded_files:
 
     col1, col2, col3 = st.columns([1,1.4,5], gap="large")
     with col1:
-        col1.metric("# Files", len(filenames))
+        col1.metric("# Files", len(files))
     with col2:  
         col2.metric("# Sentences", sentences)
     with col3:

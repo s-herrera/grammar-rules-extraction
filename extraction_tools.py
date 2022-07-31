@@ -89,7 +89,6 @@ def combine_simple_pattern(pat : str) -> str:
     res = set(" ".join(p) for r in range(3) for c in combinations([pwrset_p,w,g], r+1) for p in product(*c) if p)
     return res
 
-
 def format_simple_pattern(*pattern : str) -> str:
     """
     It formats patterns into Grew valid patterns
@@ -186,12 +185,12 @@ def get_key_predictors(P1: str, P3: str, features : dict) -> Dict[str, list]:
         if re.search(r'^.+?\.\w+?$', pat):
             k, v = pat.strip().split(".")
             if "label" in v:
-                re_match = re.search(fr"{k}\s*:\s*(\w+?)->(\w+?)", P1)
+                re_match = re.search(fr"{k}\s*:\s*(\w+?)\s*->\s*(\w+?)", P1)
                 key_predictors[re_match.group(2)].append(["deprel", {"head" : re_match.group(1), "dep" : re_match.group(2)}])
             elif "AnyFeat" in v:
                 node_pat = re.findall(fr"{k}\[.+?\]", P1)
                 node_feats = re.findall(r"\w+(?==\w+)", " ".join(node_pat))
-                key_predictors[k].extend([x for x in features[k] if x not in ("lemma", "form", "CorrectForm", "wordform", "SpaceAfter", "xpos", *node_feats)])
+                key_predictors[k].extend([x for x in features[k] if x not in ("lemma", "form", "CorrectForm", "wordform", "SpaceAfter", "xpos", "Person[psor]", "Number[psor]", *node_feats)])
             else:
                 key_predictors[k].append(v)
     return dict(key_predictors)
