@@ -7,7 +7,7 @@ from typing import Tuple, Dict
 from collections import namedtuple
 # -----------------------------------------
 
-@st.experimental_memo(show_spinner=False, persist='disk')
+@st.experimental_memo(show_spinner=False)
 def load_corpora(files: dict) -> Tuple[Dict, int, int, int]:
     """
     Load corpus in a dictionary and by using Grew. Return corpora and its number of sentences and tokens.
