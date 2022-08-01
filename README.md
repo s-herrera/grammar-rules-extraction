@@ -4,7 +4,7 @@ This is an application to extract significant patterns, potential grammar rules,
 
 ## Description
 
-It allows to query a treebank to statistically compare the distribution of a chosen patterns against others. 
+It allows to query a treebank to statistically compare the distribution of a chosen pattern against others. 
 We use [Grew-match](http://match.grew.fr/) query language to interrogate the treebanks. 
 The application is build using the `streamlit` library. 
 
