@@ -1,6 +1,6 @@
 # Grammar rules extraction App
 
-This is an application to extract significant patterns, potential grammar rules, from treebanks using statistical methods.
+This is an application to explore and extract significant patterns, potential grammar rules, from treebanks using statistical methods.
 
 ## Description
 
