@@ -8,6 +8,7 @@ It allows to query a treebank to statistically compare the distribution of a cho
 We use [Grew-match](http://match.grew.fr/) query language to interrogate the treebanks. 
 The application is build using the `streamlit` library. 
 
+On the basis of three query patterns, we search for the conditions (pattern P3) that trigger the linguistic phenomenon expressed by the pattern P2, in the initial search space (pattern P1). We performed a significance test to evaluate the distribution obtained from these three motifs. 
 
 This work was done as part of an internship in the [ANR Autogramm project](https://autogramm.github.io/). It is also the implementation 
 of my master's thesis (pluriTAL master's program).
