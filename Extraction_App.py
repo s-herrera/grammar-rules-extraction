@@ -38,7 +38,11 @@ def get_dataframe(lst : list) -> pd.DataFrame:
     df = pd.DataFrame(lst, columns=["Pattern", "Significance", "Probability ratio", "# P2&P3", "% of P1&P2", "% of P1&P3"])
     df['Significance'] = df['Significance'].apply(lambda x: et.format_significance(x))
     df = df.sort_values('Significance', ascending=False)
-    style_df = df.style.format({"% of P1&P2": "{:.4}", "% of P1&P3": "{:.4}", "Probability ratio" : "{:.4}"})
+    df = df.reset_index(drop=True)
+    style_df = df.style.format({"Significance" : "{:.0f}", "% of P1&P2": "{:.4}", "% of P1&P3": "{:.4}", "Probability ratio" : "{:.4}"})
+    style_df = style_df.set_table_styles([dict(selector="th", props=[('max-width', '300px'),
+                                ('text-overflow', 'ellipsis'), ('overflow', 'hidden')])])
+
     return style_df
 
 def del_all_session_keys(excepts : list):
@@ -55,7 +59,7 @@ def del_all_session_keys(excepts : list):
 
 def _max_width_():
     # Change size of container. This could change every streamlit update
-    max_width_str = f"max-width: 1200px;"
+    max_width_str = f"max-width: 1100px;"
     st.markdown(
         f"""
     <style>
@@ -70,11 +74,6 @@ def _max_width_():
 
 st.set_page_config(
     page_title="Rules extraction", page_icon="📐", initial_sidebar_state="expanded",
-    # menu_items={
-    #     'Get Help': '',
-    #     'Report a bug': ",
-    #     'About': "# This is a header. This is an *extremely* cool app!"},
-    #layout="wide"
 )
 
 _max_width_()
@@ -82,18 +81,12 @@ _max_width_()
 hide_menu_style = """
         <style>
             footer {visibility: hidden;}
+            #MainMenu {visibility: hidden;}
+            ul[data-testid=main-menu-list] > ul:nth-of-type(4) > li:nth-of-type(1) {display: none;}
+            ul[data-testid=main-menu-list] > div:nth-of-type(2) {display: none;}
         </style>
         """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
-
-# hide_menu_style = """
-#         <style>
-#         #MainMenu {visibility: hidden;}
-#           footer {visibility: hidden;}
-#         </style>
-#         """
-# st.markdown(hide_menu_style, unsafe_allow_html=True)
-
 
 st.write(
     """
@@ -111,12 +104,13 @@ if "res" not in st.session_state.keys():
 
 corpora = et.get_GrewMatch_corpora()
 
-pd.options.display.max_colwidth = 5000
-
-
-# Useful links
+# pd.options.display.max_colwidth = 800
+# pd.options.display.expand_frame_repr = True
+# pd.set_option("colheader_justify", "right")
 
 with st.sidebar:
+    st.subheader(":bug: Report any issue or suggestion:" )
+    st.markdown('[**Go to Github**](https://github.com/santiagohy/grammar-rules-extraction/issues/new)')
     st.subheader("🔗 Useful websites:" )
     col1, col2 = st.columns(2)
     col1.markdown('[**Grew-match**](http://match.grew.fr/)')
@@ -129,6 +123,7 @@ with st.sidebar:
     col2.markdown('[**SUD Corpora**](https://surfacesyntacticud.github.io/data/)')
 
 # Form 1
+
 with st.form("form1"):
 
     uploaded_files = st.file_uploader("CoNLL/CoNLL-U accepted", type=[".conll", ".conllu"], accept_multiple_files=True, key="upload_files")
@@ -139,7 +134,6 @@ with st.form("form1"):
     if submitted1:
         del_all_session_keys(excepts = ["upload_files"])
         
-        
     if not uploaded_files:
         st.info("Upload your files")
         load_corpora.clear()
@@ -147,7 +141,7 @@ with st.form("form1"):
 
     treebank, treebank_idx, sentences, tokens = load_corpora(files)
 
-if uploaded_files:
+if st.session_state['upload_files']:
 
     col1, col2, col3 = st.columns([1,1.4,5], gap="large")
     with col1:
@@ -163,8 +157,24 @@ if uploaded_files:
 
         st.subheader("Insert the first two querys")
 
-        P1 = st.text_area("Pattern 1", value="", key="pattern1", help="pattern { e:X->Y; X[upos=NOUN]; Y[upos=ADJ] }", placeholder="pattern { e:X->Y; X[upos=NOUN]; Y[upos=ADJ] }", disabled=False)
-        P2 = st.text_area("Pattern 2", value="", key="pattern2", help="pattern { Y << X }", placeholder="pattern { Y << X }", disabled=False)
+        p1_help = '''
+It accepts regular patterns.
+
+`pattern {e:X->Y; X[upos=NOUN]; Y[upos=ADJ]}`
+
+`pattern {X-[mod@relcl]->V} without {V->Y; Y[form=qui]}`
+'''
+
+        p2_help = '''
+It accepts regular patterns.
+
+`pattern {Y << X}`
+
+`pattern {e:H->X}`
+'''
+
+        P1 = st.text_area("Pattern 1", value="", key="pattern1", help=p1_help)
+        P2 = st.text_area("Pattern 2", value="", key="pattern2", help=p2_help)
 
         P1grew = et.build_GrewPattern(P1)
         P2grew = et.build_GrewPattern(P2)
@@ -173,7 +183,6 @@ if uploaded_files:
         
         if submitted2:
             if P1 and P2:
-
                 matchs, features = et.get_patterns_info(treebank_idx, treebank, P1grew)
                 M, n = et.compute_fixed_totals(matchs, P1grew, P2grew, treebank_idx)
                 st.session_state["M"] = M
@@ -199,11 +208,39 @@ if uploaded_files:
 
         # Form 3
         with st.form(key="form3"):
-                        
-            st.subheader("Insert the last query")
-            P3 = st.text_area("Pattern 3 or Key(s) to cluster", value="", height=None, max_chars=None, key="pattern3", help=None, placeholder="pattern { X[upos=ADJ] }\n\tor\nX.upos; e.label", disabled=False)
+
+            p3_help="""
+It's possible to use simple patterns or series of keys.
+
+**Simple pattern:** `pattern {Y[NumType=Ord]}`
+
+**Keys:** `e.label; X.lemma`
+
+**Special key:** `X.AnyFeat`
+
+The AnyFeat key includes any feature of the choosen node except those selected in the P1 and P2 and those listed below:  
+**lemma, form, CorrectForm, wordform, SpaceAfter, xpos, Person[psor], Number[psor]**
+ """
+
+
+            option_help= """
+**All possible combinations**
+
+For the **pattern {X[upos=NOUN]; X-[subj]->Y}**, it will look for:
+
+`X[upos=NOUN]`, `X-[subj]->Y` and `X[upos=NOUN]; X-[subj]->Y` patterns
+
+For the **pattern {X[upos=ADJ]} without {X[Gender]}**, it will look for:
+
+`X[upos=ADJ]`, `without {X[Gender]}` and `X[upos=ADJ] without {X[Gender]}` patterns
+
+It works also for the AnyFeat key.
+"""          
             
-            option = st.radio("Combination mode", ('Simple combinations', "All possible combinations"), horizontal=True)
+            st.subheader("Insert the last query")
+            P3 = st.text_area("Pattern 3 or Key(s) to cluster", value="", height=None, max_chars=None, key="pattern3", help=p3_help)
+            
+            option = st.radio("Combination mode", ('Simple combinations', "All possible combinations"), horizontal=True, help=option_help)
 
             if option  == 'Simple combinations':
                 combination_type = False
@@ -221,13 +258,25 @@ if uploaded_files:
                     st.session_state['res'] = res
 
                 else:
-                    st.warning("Complete the pattern")
+                    st.info("Complete the last pattern!")
 
 
         if st.session_state['res']:
             st.subheader("")    
             if combination_type: 
-                checkbox = st.checkbox("Get only the most significant subsets", value=False, key=None, help=None, on_change=None, args=None, kwargs=None, disabled=False)
+
+                checkbox_help="""
+                Filter to get the most significant subsets of patterns without losing potentially important information.
+                
+                1. It keeps the most significant subsets.
+
+                2. If two patterns are equally significant, it compares the probability ratio (PR) keeping the pattern with the higher PR
+
+                3. If the PR is also equal, it keeps both patterns.
+
+                """
+
+                checkbox = st.checkbox("Get only the most significant subsets", help=checkbox_help)
                 if checkbox:
                     subsets = et.get_significant_subsets(st.session_state['res'])
                     res = [r for sset in subsets for r in st.session_state['res'] if sset == tuple(x.strip() for x in r[0].split(";"))]
@@ -296,4 +345,4 @@ if uploaded_files:
             st.markdown("***")
 
         else:
-            st.info("No significant patterns")
+            st.empty()

@@ -24,7 +24,7 @@ def conllu_to_dict(path : str) -> Dict:
     for sent in sentences:
         for line in sent:
             if line.startswith("#"):
-                if "sent_id" in line:
+                if re.match('# sent_id',line):
                     sent_id = line.split("=")[1].strip()
                     trees[sent_id] = {'0' : {"form" : "None", "lemma" : "None", "upos" : "None", "xpos": "None", "head" : "None", "deprel" : "None"} }
             else:
@@ -63,9 +63,9 @@ def get_GrewMatch_corpora():
 def build_GrewPattern(s : str) -> GrewPattern:
     """
     """
-    p = [x.strip() for x in re.findall(r"pattern\s*{(.+?)}", s) if x]
-    w = [x.strip() for x in re.findall(r"without\s*{(.+?)}", s) if x]
-    g = [x.strip() for x in re.findall(r"global\s*{(.+?)}", s) if x]
+    p = [x.strip() for x in re.findall(r"\bpattern\b\s*{(.+?)}", s) if x]
+    w = [x.strip() for x in re.findall(r"\bwithout\b\s*{(.+?)}", s) if x]
+    g = [x.strip() for x in re.findall(r"\bglobal\b\s*{(.+?)}", s) if x]
     pattern = GrewPattern(p, w, g)
     return pattern
 
