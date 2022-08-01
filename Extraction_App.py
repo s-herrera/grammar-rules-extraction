@@ -160,17 +160,23 @@ if st.session_state['upload_files']:
         p1_help = '''
 It accepts regular patterns.
 
-`pattern {e:X->Y; X[upos=NOUN]; Y[upos=ADJ]}`
 
-`pattern {X-[mod@relcl]->V} without {V->Y; Y[form=qui]}`
+Adjective position: `pattern {e:X->Y; X[upos=NOUN]; Y[upos=ADJ]}`
+
+Subject-verb inversion: `pattern {e:H->X; X-[subj]->Y; Y[upos=NOUN|PROPN]}`
+
+Agreement of the noun: `pattern {e: X->Y; X[upos=NOUN]}`
 '''
 
         p2_help = '''
 It accepts regular patterns.
 
-`pattern {Y << X}`
 
-`pattern {e:H->X}`
+Adjective position: `pattern {Y << X}`
+
+Subject-verb inversion: `pattern {X << Y}`
+
+Agreement: `pattern {X.Number=Y.Number}`
 '''
 
         P1 = st.text_area("Pattern 1", value="", key="pattern1", help=p1_help)
