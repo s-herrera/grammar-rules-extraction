@@ -158,23 +158,18 @@ if st.session_state['upload_files']:
         st.subheader("Insert the first two querys")
 
         p1_help = '''
-It accepts regular patterns.
+It accepts normal Grew patterns.
 
 
-Adjective position: `pattern {e:X->Y; X[upos=NOUN]; Y[upos=ADJ]}`
+noun-adjective: `pattern {e:X->Y; X[upos=NOUN]; Y[upos=ADJ]}`
 
-Subject-verb inversion: `pattern {e:H->X; X-[subj]->Y; Y[upos=NOUN|PROPN]}`
-
-Agreement of the noun: `pattern {e: X->Y; X[upos=NOUN]}`
+Subject-verb: `pattern {e:H->X; X-[subj]->Y; Y[upos=NOUN|PROPN]}`
 '''
 
         p2_help = '''
-It accepts regular patterns.
+It accepts normal Grew patterns.
 
-
-Adjective position: `pattern {Y << X}`
-
-Subject-verb inversion: `pattern {X << Y}`
+Position: `pattern {Y << X}`
 
 Agreement: `pattern {X.Number=Y.Number}`
 '''
@@ -216,7 +211,7 @@ Agreement: `pattern {X.Number=Y.Number}`
         with st.form(key="form3"):
 
             p3_help="""
-It's possible to use simple patterns or series of keys.
+It is possible to use simple patterns or series of keys.
 
 **Simple pattern:** `pattern {Y[NumType=Ord]}`
 
@@ -224,7 +219,7 @@ It's possible to use simple patterns or series of keys.
 
 **Special key:** `X.AnyFeat`
 
-The AnyFeat key includes any feature of the choosen node except those selected in the P1 and P2 and those listed below:  
+The AnyFeat key includes any feature of the chosen node except those selected in the P1 and those listed below:  
 **lemma, form, CorrectForm, wordform, SpaceAfter, xpos, Person[psor], Number[psor]**
  """
 
