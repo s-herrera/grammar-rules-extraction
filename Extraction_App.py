@@ -5,7 +5,6 @@ import pandas as pd
 import tempfile
 from typing import Tuple, Dict
 from collections import namedtuple
-from io import StringIO
 # -----------------------------------------
 
 @st.experimental_memo(show_spinner=False, persist='disk')
@@ -139,10 +138,11 @@ with st.form("form1"):
 
     if submitted1:
         del_all_session_keys(excepts = ["upload_files"])
-        load_corpora.clear()
+        
         
     if not uploaded_files:
         st.info("Upload your files")
+        load_corpora.clear()
         st.stop()
 
     treebank, treebank_idx, sentences, tokens = load_corpora(files)
@@ -181,8 +181,6 @@ if uploaded_files:
                 st.session_state["matchs"] = matchs
                 st.session_state["features"] = features
                 
-                # if 'res' in st.session_state.keys():
-                #     st.session_state['res'] = []
             else:
                 st.info("Complete both patterns!")
 
@@ -232,7 +230,7 @@ if uploaded_files:
                 checkbox = st.checkbox("Get only the most significant subsets", value=False, key=None, help=None, on_change=None, args=None, kwargs=None, disabled=False)
                 if checkbox:
                     subsets = et.get_significant_subsets(st.session_state['res'])
-                    res = [r for sset in subsets for r in st.session_state['res'] if sset in r]
+                    res = [r for sset in subsets for r in st.session_state['res'] if sset == tuple(x.strip() for x in r[0].split(";"))]
                     style_df = get_dataframe(res)
                     st.dataframe(style_df)
                 else:
@@ -257,7 +255,7 @@ if uploaded_files:
             with col4:
 
                 if corpus and choice:
-                # because keys patterns doesn't have the string "patterns {}". It's necessary to make the difference
+                    # because keys patterns doesn't have the string "patterns {}". It's necessary to make the difference
                     if st.session_state['keys']:
                         P3grew = et.build_GrewPattern(f"pattern {{ {choice} }}")
                     else:

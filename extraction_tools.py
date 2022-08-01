@@ -1,4 +1,5 @@
 import re, urllib, time
+from telnetlib import IP
 import streamlit as st
 import numpy as np
 import grew
@@ -167,9 +168,7 @@ def compute_fixed_totals(matchs, P1, P2, treebank_idx):
     Compute fixed totals of a contengcy table. M = P1 occurrences. n = P2 occurrences.
     """
     M = len([m for m in matchs])
-    print(grewPattern_to_string(P1, P2))
     n = grew.corpus_count(pattern = grewPattern_to_string(P1, P2), corpus_index = treebank_idx)
-    print(n)
     return M, n
 
 def get_key_predictors(P1: str, P3: str, features : dict) -> Dict[str, list]:
@@ -271,34 +270,33 @@ def rules_extraction(treebank_idx : int, patterns : Dict, P1 : GrewPattern, P2: 
     st.write(f"Time: {round(end - start, 3)}")
     return res
 
-
-def get_significant_subsets(res : list):
+def get_significant_subsets(lst : list):
     """
     Filter the results to obtain the most significant sub-patterns
     """
+    res_sorted = sorted(lst, key=lambda x: (-x[1], len(x[0])))
 
-    res_sorted_len = sorted(res, key = lambda x: len(x[0]))
+    dropped, subsets = set(), set()
 
-    subsets, visited = set(), set()
-    
-    for res in res_sorted_len:
-        to_keep = set()
-        ipattern, ipvalue, iPR, _, _, _ = res
-        for xres in res_sorted_len:
-            if set(ipattern).issubset(set(xres[0])):
-                jpattern, jpvalue, jPR, _, _, _ = xres
-                if jpvalue < ipvalue:
-                    to_keep.add(jpattern)
-                elif jpvalue == ipvalue and jPR > iPR:
-                    to_keep.add(jpattern)
-                elif jpvalue == ipvalue and jPR == iPR:
-                    if ipattern != jpattern:
-                        visited.add(jpattern)
+    for ires in res_sorted:
+        ipattern = tuple(x.strip() for x in ires[0].split(";"))
+        ipvalue, iPR = ires[1:3]
+        for jres in res_sorted:
+            jpattern = tuple(x.strip() for x in jres[0].split(";"))
+            jpvalue, jPR = jres[1:3]
+            if set(ipattern).issubset(jpattern) and jpattern not in dropped:
+                if ipvalue < jpvalue:
+                    dropped.add(jpattern)
+                    subsets.add(ipattern)
+                elif ipvalue == jpvalue:
+                    if iPR > jPR:
+                        dropped.add(jpattern)
+                    elif iPR == jPR:
+                        subsets.update([ipattern, jpattern])
                     else:
-                        to_keep.add(ipattern)
-                else:
-                    visited.add(jpattern)
-        subsets.update(to_keep)
-    subsets.difference_update(visited)
+                        if ipattern != jpattern:
+                            subsets.add(ipattern)
 
+    subsets.difference_update(dropped)
     return subsets
+
