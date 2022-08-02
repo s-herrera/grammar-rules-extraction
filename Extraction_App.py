@@ -97,8 +97,6 @@ Extracting significant patterns from treebanks
 
 GrewPattern = namedtuple('GrewPattern', 'pattern without global_')
 
-grew.init()
-
 if "res" not in st.session_state.keys():
     st.session_state["res"] = []
 
@@ -139,6 +137,7 @@ with st.form("form1"):
         load_corpora.clear()
         st.stop()
 
+    grew.init()
     treebank, treebank_idx, sentences, tokens = load_corpora(files)
 
 if st.session_state['upload_files']:
