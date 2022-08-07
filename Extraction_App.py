@@ -55,10 +55,10 @@ def get_dataframe(lst: list) -> pd.DataFrame:
 
 
 def get_aggrid_and_response(df: pd.DataFrame) -> Dict:
-    df = df.replace(float('inf'), 'inf')
+    df = df.replace(float('inf'), 'Infinity')
     gb = GridOptionsBuilder.from_dataframe(df)
     gb.configure_selection("single", use_checkbox=True)
-    gb.configure_column(field="Significance", type=["numericColumn", "numberColumnFilter", "customNumericFormat"])
+    gb.configure_column(field="Significance", type=["numericColumn", "numberColumnFilter"])
     gb.configure_column(field="Probability ratio", type=["numericColumn", "numberColumnFilter",
                                         "customNumericFormat"], precision=3)
     gb.configure_columns(column_names=["% of P1&P2", "% of P1&P3"], type=["numericColumn", "numberColumnFilter", "customNumericFormat"], precision=2)
