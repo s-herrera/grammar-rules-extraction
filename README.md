@@ -79,6 +79,14 @@ pip3 install -U -r requirements.txt
 python3 -m streamlit run Extraction_App.py
 ```
 
+### Update app
+
+```python
+source .venv/bin/activate
+pip3 install -U -r requirements.txt
+```
+
+
 ## Contributing
 For any problem or suggestion, posting issues is welcome.
 
