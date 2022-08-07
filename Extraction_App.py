@@ -1,21 +1,32 @@
-import grew
-import extraction_tools as et
 import streamlit as st
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+
+import grew
 import pandas as pd
+import numpy as np
+
 import tempfile
 from typing import Tuple, Dict
 from collections import namedtuple
+
+import extraction_tools as et
+from texts import CHECKBOX_HELP, P1P2_HELP, P3_HELP, OPTION_HELP, ABOUT
+
 # -----------------------------------------
 
-@st.experimental_memo(show_spinner=False)
-def load_corpora(files: dict) -> Tuple[Dict, int, int, int]:
+
+# @st.experimental_memo(show_spinner=False, suppress_st_warning=True)
+# Variable 'files_' is used to check / st.state_session['uploaded_files']
+# in cache if the uploaded files have changed
+def load_corpora(uploaded_files: list) -> Tuple[Dict, int, int, int]:
     """
-    Load corpus in a dictionary and by using Grew. Return corpora and its number of sentences and tokens.
+    Load corpus in a dictionary and by using Grew.
+
+    Return corpora and its number of sentences and tokens.
     """
-    # Variable 'files' is used to check if the upload files have changed
     with st.spinner('Loading treebank...'):
         with tempfile.NamedTemporaryFile(mode="wt", encoding="utf-8") as temp:
-            for uploaded_file in st.session_state['upload_files']:
+            for uploaded_file in uploaded_files:
                 f = uploaded_file.getvalue().decode("utf-8")
                 for line in f:
                     temp.write(line)
@@ -26,323 +37,290 @@ def load_corpora(files: dict) -> Tuple[Dict, int, int, int]:
 
     return treebank, treebank_idx, sentences, tokens
 
+
 def convert_df(df):
     """
     Convert a dataframe into a tsv and a json.
     """
     jsn = df.to_json(orient="split", index=False, indent=4)
-    tsv = df.to_csv(index=False, encoding = "utf-8", sep="\t")
+    tsv = df.to_csv(index=False, encoding="utf-8", sep="\t")
     return jsn, tsv
 
-def get_dataframe(lst : list) -> pd.DataFrame:
-    df = pd.DataFrame(lst, columns=["Pattern", "Significance", "Probability ratio", "# P2&P3", "% of P1&P2", "% of P1&P3"])
+
+def get_dataframe(lst: list) -> pd.DataFrame:
+    df = pd.DataFrame(lst, columns=["Pattern", "Significance", "Probability ratio", "% of P1&P2", "% of P1&P3"])
     df['Significance'] = df['Significance'].apply(lambda x: et.format_significance(x))
     df = df.sort_values('Significance', ascending=False)
-    df = df.reset_index(drop=True)
-    style_df = df.style.format({"Significance" : "{:.0f}", "% of P1&P2": "{:.4}", "% of P1&P3": "{:.4}", "Probability ratio" : "{:.4}"})
-    style_df = style_df.set_table_styles([dict(selector="th", props=[('max-width', '300px'),
-                                ('text-overflow', 'ellipsis'), ('overflow', 'hidden')])])
+    return df
 
-    return style_df
 
-def del_all_session_keys(excepts : list):
-    for key in st.session_state.keys():
-        if key not in excepts:
-            del st.session_state[key]
+def get_aggrid_and_response(df: pd.DataFrame) -> Dict:
+    df = df.replace(float('inf'), 'inf')
+    gb = GridOptionsBuilder.from_dataframe(df)
+    gb.configure_selection("single", use_checkbox=True)
+    gb.configure_column(field="Significance", type=["numericColumn", "numberColumnFilter", "customNumericFormat"])
+    gb.configure_column(field="Probability ratio", type=["numericColumn", "numberColumnFilter",
+                                        "customNumericFormat"], precision=3)
+    gb.configure_columns(column_names=["% of P1&P2", "% of P1&P3"], type=["numericColumn", "numberColumnFilter", "customNumericFormat"], precision=2)
+    go = gb.build()
+    grid_response = AgGrid(
+        data=df,
+        gridOptions=go,
+        update_mode=GridUpdateMode.SELECTION_CHANGED,
+        fit_columns_on_grid_load=True,
+        theme="streamlit",
+        conversion_errors="ignore",
+        try_to_convert_back_to_original_types=False)
+    return grid_response
+
+
+def initialize_session_keys(keys: list = ['uploaded_files', 'filenames', 'pattern1', 'pattern2',
+                                          'pattern3', 'result', 'filenames', 'M', 'n', 'files',
+                                          'sentences', 'tokens', 'treebanks', 'treebank_idx']):
+    for k in keys:
+        if k not in st.session_state:
+            st.session_state[k] = ""
+
+
+def reinitialize_session_keys(keys: list = ['uploaded_files', 'filenames', 'pattern1',
+                                            'pattern2', 'pattern3', 'result']):
+    for k in keys:
+        st.session_state[k] = ""
+
+
+def clear_data():
+    st.experimental_memo.clear()
+    reinitialize_session_keys()
 
 # -----------------------------------------
 
-# TODO
-# Change MENU
-# Information after P1&P2 in expander
-# FIX title
-
-def _max_width_():
-    # Change size of container. This could change every streamlit update
-    max_width_str = f"max-width: 1100px;"
-    st.markdown(
-        f"""
-    <style>
-    .main .block-container{{
-        {max_width_str}
-    }}
-    </style>
-    """,
-        unsafe_allow_html=True,
-    )
-
 
 st.set_page_config(
-    page_title="Rules extraction", page_icon="📐", initial_sidebar_state="expanded",
+    page_title="Rules extraction",
+    page_icon="📐",
+    initial_sidebar_state="expanded",
+    layout="wide",
+    menu_items={"Get Help": None, "Report a Bug": "https://github.com/santiagohy/grammar-rules-extraction/issues/new"}
 )
 
-_max_width_()
+css = """
+<style>
+    .main .block-container {padding-top: 3rem;}
+    div[data-testid=stSidebarNav] > ul:nth-of-type(1) {padding-top: 5rem;}
+    footer {visibility: hidden;}
+    ul[data-testid=main-menu-list] > ul:nth-of-type(5) > li:nth-of-type(1) {display: none;}
+    ul[data-testid=main-menu-list] > div:nth-of-type(3) {display: none;}
+    .css-xjsf0x.e10mrw3y1 {display: none;}
+</style>"""
+st.markdown(css, unsafe_allow_html=True)
 
-hide_menu_style = """
-        <style>
-            footer {visibility: hidden;}
-            #MainMenu {visibility: hidden;}
-            ul[data-testid=main-menu-list] > ul:nth-of-type(4) > li:nth-of-type(1) {display: none;}
-            ul[data-testid=main-menu-list] > div:nth-of-type(2) {display: none;}
-        </style>
-        """
-st.markdown(hide_menu_style, unsafe_allow_html=True)
-
-st.write(
-    """
-# 📐 Rules Extraction App
-Extracting significant patterns from treebanks
-"""
-)
+st.markdown("# Rules extraction 📐")
 
 GrewPattern = namedtuple('GrewPattern', 'pattern without global_')
 
-if "res" not in st.session_state.keys():
-    st.session_state["res"] = []
+grew.init()
+initialize_session_keys()
 
-corpora = et.get_GrewMatch_corpora()
-
-# pd.options.display.max_colwidth = 800
-# pd.options.display.expand_frame_repr = True
-# pd.set_option("colheader_justify", "right")
-
-with st.sidebar:
-    st.subheader(":bug: Report any issue or suggestion:" )
-    st.markdown('[**Go to Github**](https://github.com/santiagohy/grammar-rules-extraction/issues/new)')
-    st.subheader("🔗 Useful websites:" )
-    col1, col2 = st.columns(2)
-    col1.markdown('[**Grew-match**](http://match.grew.fr/)')
-    col2.markdown('[**Universal tables**](http://tables.grew.fr/)')
-    col1, col2 = st.columns(2)
-    col1.markdown('[**UD Guidelines**](https://universaldependencies.org/guidelines.html)')
-    col2.markdown('[**SUD Guidelines**](https://surfacesyntacticud.github.io/guidelines/u/)')
-    col1, col2 = st.columns(2)
-    col1.markdown('[**UD Corpora**](https://universaldependencies.org/#download)')
-    col2.markdown('[**SUD Corpora**](https://surfacesyntacticud.github.io/data/)')
+with st.expander('🔖 About the app '):
+    st.markdown(ABOUT)
 
 # Form 1
 
-with st.form("form1"):
+with st.form("form1", clear_on_submit=True):
 
-    uploaded_files = st.file_uploader("CoNLL/CoNLL-U accepted", type=[".conll", ".conllu"], accept_multiple_files=True, key="upload_files")
-    files = {f.name : {'size' : f.size} for f in uploaded_files}
-
-    submitted1 = st.form_submit_button("Upload")
+    uploaded_files = st.file_uploader("CoNLL/CoNLL-U accepted", type=[".conll", ".conllu"], accept_multiple_files=True)
+    submitted1 = st.form_submit_button('Upload')
 
     if submitted1:
-        del_all_session_keys(excepts = ["upload_files"])
-        
-    if not uploaded_files:
-        st.info("Upload your files")
-        load_corpora.clear()
-        st.stop()
+        reinitialize_session_keys()
+        st.session_state['uploaded_files'] = uploaded_files
+        st.session_state['filenames'] = [f.name for f in uploaded_files]
+        st.session_state['files'] = {i: (uploaded_files[i].name, uploaded_files[i].size) for i in range(len(uploaded_files))}
+        st.session_state['df'] = pd.DataFrame(np.zeros((3, 3), dtype=int), columns=["p3", "¬ p3", "total"], index=["p2", "¬ p2", "total"])
 
-    grew.init()
-    treebank, treebank_idx, sentences, tokens = load_corpora(files)
+        treebank, treebank_idx, sentences, tokens = load_corpora(st.session_state['uploaded_files'])
+        st.session_state['treebank'] = treebank
+        st.session_state['treebank_idx'] = treebank_idx
+        st.session_state['sentences'] = sentences
+        st.session_state['tokens'] = tokens
 
-if st.session_state['upload_files']:
+if st.session_state['uploaded_files']:
 
-    col1, col2, col3 = st.columns([1,1.4,5], gap="large")
-    with col1:
-        col1.metric("# Files", len(files))
-    with col2:  
-        col2.metric("# Sentences", sentences)
-    with col3:
-        col3.metric("# Tokens", tokens, help="It includes multiword tokens (e.g. n-n+1 indexed tokens)")
+    if len(st.session_state['filenames']) <= 3:
+        st.sidebar.json(st.session_state['filenames'])
+    else:
+        st.sidebar.json(st.session_state['filenames'], expanded=False)
 
-    # Form2
-    
+    with st.sidebar:
+        col1, col2, col3 = st.columns([0.5, 1, 1], gap="small")  # 0.3,0.9,1
+        col1.metric("# Files", len(st.session_state['filenames']))
+        col2.metric("# Sentences", st.session_state['sentences'])
+        col3.metric("# Tokens", st.session_state['tokens'], help="It includes multiword tokens (e.g. n-n+1 indexed tokens)")
+
+    st.sidebar.markdown("#### Features of P1's nodes:")
+
+    featsholder = st.sidebar.empty()
+    nresholder = st.sidebar.empty()
+    p3holder = st.sidebar.empty()
+    tableholder = st.sidebar.empty()
+    linkholder = st.sidebar.empty()
+    buttonsholder = st.sidebar.empty()
+
+    nresholder.markdown("#### No. of results:")
+    p3holder.markdown("#### Pattern 3:")
+    tableholder.table(st.session_state['df'])
+
+    # Form 2
     with st.form(key="form2"):
 
-        st.subheader("Insert the first two querys")
+        st.subheader("First two querys")
 
-        p1_help = '''
-It accepts normal Grew patterns.
-
-
-noun-adjective: `pattern {e:X->Y; X[upos=NOUN]; Y[upos=ADJ]}`
-
-Subject-verb: `pattern {e:H->X; X-[subj]->Y; Y[upos=NOUN|PROPN]}`
-'''
-
-        p2_help = '''
-It accepts normal Grew patterns.
-
-Position: `pattern {Y << X}`
-
-Agreement: `pattern {X.Number=Y.Number}`
-'''
-
-        P1 = st.text_area("Pattern 1", value="", key="pattern1", help=p1_help)
-        P2 = st.text_area("Pattern 2", value="", key="pattern2", help=p2_help)
-
-        P1grew = et.build_GrewPattern(P1)
-        P2grew = et.build_GrewPattern(P2)
-
+        col1, col2 = st.columns(2)
+        p1 = col1.text_area("Pattern 1", value=st.session_state['pattern1'], height=80)
+        p2 = col2.text_area("Pattern 2", value=st.session_state['pattern2'], height=80, help=P1P2_HELP)
+        p1grew = et.build_GrewPattern(p1)
+        p2grew = et.build_GrewPattern(p2)
         submitted2 = st.form_submit_button("Match")
-        
+
+        for p in (p1, p2):
+            validation = et.is_valid_pattern(p)
+            if isinstance(validation, Exception):
+                st.exception(validation)
+                st.stop()
+
         if submitted2:
-            if P1 and P2:
-                matchs, features = et.get_patterns_info(treebank_idx, treebank, P1grew)
-                M, n = et.compute_fixed_totals(matchs, P1grew, P2grew, treebank_idx)
+            if p1 and p2 and p1 == st.session_state['pattern1'] and p2 == st.session_state['pattern2']:
+                st.info("🔂 Same patterns as before")
+
+            if p1 and p2:
+                reinitialize_session_keys(keys=['pattern1', 'pattern2', 'pattern3', 'result'])
+                st.session_state['pattern1'] = p1
+                st.session_state['pattern2'] = p2
+
+                matchs, features = et.get_patterns_info(st.session_state['treebank_idx'], st.session_state['treebank'], p1grew)
+                M, n = et.compute_fixed_totals(matchs, p1grew, p2grew, st.session_state['treebank_idx'])
                 st.session_state["M"] = M
                 st.session_state["n"] = n
                 st.session_state["matchs"] = matchs
                 st.session_state["features"] = features
-                
+                st.session_state['df'] = pd.DataFrame(np.zeros((3, 3), dtype=int), columns=["p3", "¬ p3", "total"], index=["p2", "¬ p2", "total"])
             else:
                 st.info("Complete both patterns!")
+else:
+    st.info("Upload a corpora")
+    st.stop()
 
-    if P1 and P2:
+# Form 3
+if st.session_state['pattern1'] and st.session_state['pattern2']:
 
-        M = st.session_state['M']
-        n = st.session_state['n']
+    M = st.session_state['M']
+    n = st.session_state['n']
 
-        col1, col2 = st.columns([1.3,2])
-        with col1:
-            st.caption("### Features of P1's nodes:")
-            st.json(st.session_state['features'], expanded=False)
-        with col2:
-            df = pd.DataFrame({"pattern 2" : [n], " ¬ pattern 2" : [M-n], " total" : [M]}, index=["pattern 1"])
-            st.table(df)
+    featsholder.json(st.session_state['features'], expanded=False)
 
-        # Form 3
-        with st.form(key="form3"):
+    st.session_state['df']['total'] = [n, M-n, M]
+    tableholder.table(st.session_state['df'])
 
-            p3_help="""
-It is possible to use simple patterns or series of keys.
+    with st.form(key="form3"):
+        st.subheader("Last query")
 
-**Simple pattern:** `pattern {Y[NumType=Ord]}`
+        p3 = st.text_area("Pattern 3 or Key(s) to cluster", value=st.session_state['pattern3'], help=P3_HELP, height=80)
 
-**Keys:** `e.label; X.lemma`
-
-**Special key:** `X.AnyFeat`
-
-The AnyFeat key includes any feature of the chosen node except those selected in the P1 and those listed below:  
-**lemma, form, CorrectForm, wordform, SpaceAfter, xpos, Person[psor], Number[psor]**
- """
-
-
-            option_help= """
-**All possible combinations**
-
-For the **pattern {X[upos=NOUN]; X-[subj]->Y}**, it will look for:
-
-`X[upos=NOUN]`, `X-[subj]->Y` and `X[upos=NOUN]; X-[subj]->Y` patterns
-
-For the **pattern {X[upos=ADJ]} without {X[Gender]}**, it will look for:
-
-`X[upos=ADJ]`, `without {X[Gender]}` and `X[upos=ADJ] without {X[Gender]}` patterns
-
-It works also for the AnyFeat key.
-"""          
-            
-            st.subheader("Insert the last query")
-            P3 = st.text_area("Pattern 3 or Key(s) to cluster", value="", height=None, max_chars=None, key="pattern3", help=p3_help)
-            
-            option = st.radio("Combination mode", ('Simple combinations', "All possible combinations"), horizontal=True, help=option_help)
-
-            if option  == 'Simple combinations':
-                combination_type = False
-            else:
-                combination_type = True
-                
-            submitted3 = st.form_submit_button("Get results")
-
-            if submitted3:
-                if P3:
-                    key_predictors = et.get_key_predictors(P1, P3, st.session_state['features'])
-                    st.session_state['keys'] = bool(key_predictors)
-                    patterns = et.get_patterns(treebank, st.session_state["matchs"], P3, key_predictors, combination_type)
-                    res = et.rules_extraction(treebank_idx, patterns, P1grew, P2grew, st.session_state["M"], st.session_state["n"])
-                    st.session_state['res'] = res
-
-                else:
-                    st.info("Complete the last pattern!")
-
-
-        if st.session_state['res']:
-            st.subheader("")    
-            if combination_type: 
-
-                checkbox_help="""
-                Filter to get the most significant subsets of patterns without losing potentially important information.
-                
-                1. It keeps the most significant subsets.
-
-                2. If two patterns are equally significant, it compares the probability ratio (PR) keeping the pattern with the higher PR
-
-                3. If the PR is also equal, it keeps both patterns.
-
-                """
-
-                checkbox = st.checkbox("Get only the most significant subsets", help=checkbox_help)
-                if checkbox:
-                    subsets = et.get_significant_subsets(st.session_state['res'])
-                    res = [r for sset in subsets for r in st.session_state['res'] if sset == tuple(x.strip() for x in r[0].split(";"))]
-                    style_df = get_dataframe(res)
-                    st.dataframe(style_df)
-                else:
-                    style_df = get_dataframe(st.session_state['res'])
-                    st.dataframe(style_df)
-            else:
-                style_df = get_dataframe(st.session_state['res'])
-                st.dataframe(style_df)
-
-            res_lst = style_df.data['Pattern'].to_list()
-            res_lst.insert(0, '')
-            st.markdown("***")
-            col1, col2, col3, col4 = st.columns([1.3,1.1,1.1,1])
-            with col1:
-                st.markdown("")
-                st.markdown("")
-                st.subheader("Grew-match link ➡️")
-            with col2:
-                corpus = st.selectbox('Select the corpus :', corpora)
-            with col3:
-                choice = st.selectbox('Choose the pattern:', res_lst, index=0)
-            with col4:
-
-                if corpus and choice:
-                    # because keys patterns doesn't have the string "patterns {}". It's necessary to make the difference
-                    if st.session_state['keys']:
-                        P3grew = et.build_GrewPattern(f"pattern {{ {choice} }}")
-                    else:
-                        P3grew = et.build_GrewPattern(choice)
-                
-                    link = et.get_Grewmatch_link(corpus, P1grew, P2grew, P3grew)
-                    st.markdown("")
-                    st.markdown(f'## 🔗 [link]({link})')
-                else:
-                    st.markdown("")
-                    st.markdown("")
-                    st.markdown("")
-            st.markdown("***")
-            jsn, tsv = convert_df(style_df.data)
-            col1, col2, col3, col4 = st.columns([1.1,0.3,0.8,1])
-            with col1:
-                st.markdown("")
-                st.markdown("")
-                st.subheader("Download results ⬇️")
-            with col3:
-                st.markdown("")
-                st.subheader("")
-                st.download_button(
-                        label="Download as JSON",
-                        data=jsn,
-                        file_name='results.json',
-                        mime='text/json',
-                    )
-            with col4:
-                st.markdown("")
-                st.subheader("")
-                st.download_button(
-                        label="Download as TSV",
-                        data=tsv,
-                        file_name='results.tsv',
-                        mime='text/csv',
-                    )
-            st.markdown("***")
-
+        option = st.radio("Combination mode", ('Simple combination', "All possible combinations"), horizontal=True, help=OPTION_HELP)
+        if option == 'Simple combination':
+            combination_type = False
         else:
-            st.empty()
+            combination_type = True
+        submitted3 = st.form_submit_button("Get results")
+
+        if submitted3:
+            if p3 and p3 == st.session_state['pattern3']:
+                st.info("🔂 Same pattern as before")
+
+            st.session_state['pattern3'] = p3
+            st.session_state['df'][["p3", "¬ p3"]] = np.zeros([3, 2], dtype=int)
+            tableholder.table(st.session_state['df'])
+
+            if st.session_state['pattern3']:
+                key_predictors = et.get_key_predictors(p1, p3, st.session_state['features'])
+
+                if not key_predictors:
+                    validation = et.is_valid_pattern(p3)
+                    if isinstance(validation, Exception):
+                        st.exception(validation)
+                        st.stop()
+
+                patterns = et.get_patterns(st.session_state['treebank'], st.session_state["matchs"], p3, key_predictors, combination_type)
+                result, tables = et.rules_extraction(st.session_state['treebank_idx'], patterns, p1grew, p2grew, st.session_state["M"], st.session_state["n"])
+                st.session_state['keys'] = bool(key_predictors)
+
+                st.session_state['result'] = [[]]
+                if result:
+                    st.session_state['result'] = result
+                    st.session_state['tables'] = tables
+            else:
+                st.info("Complete the last pattern!")
+
+# Results
+    with st.container():
+        if st.session_state['result']:
+
+            if st.session_state['result'][0]:
+                result = st.session_state['result']
+                if combination_type:
+                    checkbox = st.checkbox("Get only the most significant subsets", help=CHECKBOX_HELP)
+                    if checkbox:
+                        subsets = et.get_significant_subsets(result)
+                        result = [r for sset in subsets for r in result if sset == tuple(x.strip() for x in r[0].split(";"))]
+                    df = get_dataframe(result)
+                    grid_response = get_aggrid_and_response(df)
+                else:
+                    df = get_dataframe(result)
+                    grid_response = get_aggrid_and_response(df)
+
+                nresholder.markdown(f"#### No. of results: `{len(result)}`")
+
+                if grid_response['selected_rows']:
+
+                    # Get contengency table from selection
+                    pattern3 = grid_response['selected_rows'][0]['Pattern']
+                    table = st.session_state['tables'][pattern3]
+                    p3holder.markdown(f"""
+                    #### Pattern 3:
+                        {pattern3}""")
+                    dfnewvalues = np.append(table, [np.sum(table, axis=0)], axis=0)
+                    st.session_state['df'][["p3", "¬ p3"]] = dfnewvalues
+                    tableholder.table(st.session_state['df'])
+
+                    # Grew-match link
+                    if st.session_state['keys']:
+                        p3grew = et.build_GrewPattern(f"pattern {{ {pattern3} }}")
+                    else:
+                        p3grew = et.build_GrewPattern(pattern3)
+                    link = et.get_GrewMatch_link(st.session_state['filenames'], p1grew, p2grew, p3grew)
+                    linkholder.markdown(f'🔗 [**Grew-match link**]({link})')
+
+                else:
+                    st.session_state['df'][["p3", "¬ p3"]] = st.session_state['df'][["p3", "¬ p3"]] = np.zeros([3, 2], dtype=int)
+                    tableholder.table(st.session_state['df'])
+
+                jsn, tsv = convert_df(df)
+                _, col2, col3, _ = st.columns([2, 1, 1, 2])
+                col2.download_button(label="Download as JSON", data=jsn, file_name='results.json',mime='text/json')
+                col3.download_button(label="Download as TSV", data=tsv, file_name='results.tsv', mime='text/csv')
+            else:
+                nresholder.markdown("#### No. of results: `0`")
+                st.info(f'''
+        No significant results 👀
+
+                    p3 = {st.session_state['pattern3']}''')
+else:
+    table_result = st.empty()
+
+with st.sidebar:
+    _, col2, _ = st.columns(3)
+    clear = col2.button("Clear all 🗑️")
+    st.subheader("")
+    if clear:
+        clear_data()
+        st.experimental_rerun()

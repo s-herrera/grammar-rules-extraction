@@ -58,6 +58,7 @@ cd grammar-rules-extraction
 3. Create a virtual environment in which to run the app.
 
 ```bash
+pip3 install virtualenv
 python3 -m virtualenv .venv
 source .venv/bin/activate
 ```

@@ -1,19 +1,20 @@
 import streamlit as st
 
 st.set_page_config(
-    page_title="Rules extraction", page_icon="📐", initial_sidebar_state="expanded",
+    page_title="Rules extraction", page_icon="📐",
+    initial_sidebar_state="expanded",
 )
 
-hide_menu_style = """
-        <style>
-            footer {visibility: hidden;}
-            #MainMenu {visibility: hidden;}
-            ul[data-testid=main-menu-list] > ul:nth-of-type(4) > li:nth-of-type(1) {display: none;}
-            ul[data-testid=main-menu-list] > div:nth-of-type(2) {display: none;}
-        </style>
-        """
-st.markdown(hide_menu_style, unsafe_allow_html=True)
-
+css = """
+<style>
+    .main .block-container {padding-top: 3rem;}
+    div[data-testid=stSidebarNav] > ul:nth-of-type(1) {padding-top: 5rem;}
+    footer {visibility: hidden;}
+    ul[data-testid=main-menu-list] > ul:nth-of-type(5) > li:nth-of-type(1) {display: none;}
+    ul[data-testid=main-menu-list] > div:nth-of-type(3) {display: none;}
+    .css-xjsf0x.e10mrw3y1 {display: none;}
+</style>"""
+st.markdown(css, unsafe_allow_html=True)
 
 st.markdown("## Examples :pencil2:")
 
@@ -40,4 +41,3 @@ st.markdown("**P1** : pattern{ V[Polarity=Neg, upos=VERB|AUX]}; e:X->V")
 st.markdown('**P2** : pattern { V.form=re".*l" }')
 st.markdown("**P3** : e.label; V.AnyFeat; X.AnyFeat")
 st.markdown("---")
-
