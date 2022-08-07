@@ -81,7 +81,8 @@ python3 -m streamlit run Extraction_App.py
 
 ### Update app
 
-```python
+```bash
+git pull
 source .venv/bin/activate
 pip3 install -U -r requirements.txt
 ```
