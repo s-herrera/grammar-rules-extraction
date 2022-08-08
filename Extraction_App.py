@@ -199,6 +199,7 @@ if st.session_state['uploaded_files']:
         # p1 = st.session_state['pattern1']
         # p2 = st.session_state['pattern2']
 
+
         p1grew = et.build_GrewPattern(p1)
         p2grew = et.build_GrewPattern(p2)
 
@@ -213,7 +214,7 @@ if st.session_state['uploaded_files']:
         if submitted2:
 
             if p1 and p2 and p1 == st.session_state['pattern1'] and p2 == st.session_state['pattern2']:
-                st.warning("🔂 Same patterns as before")
+                st.warning("🔂 Same pattern(s) as before")
 
             if p1 and p2:
                 reinitialize_session_keys(keys=['pattern3', 'result'])
