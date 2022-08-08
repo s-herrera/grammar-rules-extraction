@@ -71,7 +71,6 @@ def get_corpora_name(lst: list) -> str:
     else:
         lang_code, corpus, scheme, *_ = re.split(r"-|_|\.", common_prefix)
         corpora = f"{scheme.upper()}_{code_to_lang[lang_code]}-{corpus.upper()}"
-    print(corpora)
     return corpora
 
 
