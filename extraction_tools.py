@@ -65,8 +65,13 @@ def get_corpora_name(lst: list) -> str:
         code_to_lang = json.load(f)
 
     common_prefix = os.path.commonprefix(lst)
-    lang_code, corpus, scheme, *_ = re.split(r"-|_|\.", common_prefix)
-    corpora = f"{scheme.upper()}_{code_to_lang[lang_code]}-{corpus.upper()}"
+    splited = [x for x in re.split(r"-|_|\.", common_prefix) if x]
+    if len(splited) <= 2:
+        corpora = common_prefix
+    else:
+        lang_code, corpus, scheme, *_ = re.split(r"-|_|\.", common_prefix)
+        corpora = f"{scheme.upper()}_{code_to_lang[lang_code]}-{corpus.upper()}"
+    print(corpora)
     return corpora
 
 
