@@ -106,7 +106,7 @@ def is_valid_pattern(s: str) -> bool:
     if not is_balanced(s):
         return PatternError("The curly or the square brackets are not balanced")
 
-    grew_cmds = [x.strip().split('}')[-1] for x in s.split('{')]
+    grew_cmds = [x.split('}')[-1].strip() for x in s.split('{')]
     matchs = [re.match(r"^(pattern|without|global)$", w) for w in grew_cmds if w]
     if not all(matchs):
         return PatternError("The Grew commands (pattern, without, global) or the key patterns (e.g. X.upos) are not acceptable")
@@ -320,19 +320,9 @@ def rules_extraction(treebank_idx: int, patterns: Dict, P1: GrewPattern, P2: Gre
         table = np.array([[k, n-k], [N-k, M - (n + N) + k]])
         _, p_value = fisher_exact(table=table, alternative='greater')
         if p_value < 0.01:
-            # percent_M1M2 = round((k/n), 2)
-            # percent_M1M3 = round((k/N), 2)
-            # percent_M1M2 = round((k/n), 2)*100
-            # percent_M1M3 = round((k/N), 2)*100
             percent_M1M2 = (k/n)*100
             percent_M1M3 = (k/N)*100
             # BAD solution
-            # if n-k == 0: # ZeroDivisionError
-            #     probability_ratio = round((k/N)/((1)/(M-N)), 3)
-            # else:
-            #     probability_ratio = round((k/N)/((n-k)/(M-N)), 3)
-
-
             if n-k == 0:  # ZeroDivisionError
                 probability_ratio = (k/N)/((1)/(M-N))
             else:

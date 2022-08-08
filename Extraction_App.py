@@ -76,10 +76,19 @@ def get_aggrid_and_response(df: pd.DataFrame) -> Dict:
 
 def initialize_session_keys(keys: list = ['uploaded_files', 'filenames', 'pattern1', 'pattern2',
                                           'pattern3', 'result', 'filenames', 'M', 'n', 'files',
-                                          'sentences', 'tokens', 'treebanks', 'treebank_idx']):
+                                          'sentences', 'tokens', 'treebanks', 'treebank_idx',
+                                          'p1_key', 'p2_key', 'p3_key', "p1val", "p2val"]):
     for k in keys:
         if k not in st.session_state:
             st.session_state[k] = ""
+
+
+# def initialize_session_keys(keys: list = ['uploaded_files', 'filenames', 'result', 'filenames', 'M', 'n', 'files',
+#                                           'sentences', 'tokens', 'treebanks', 'treebank_idx',
+#                                           'p1_key', 'p2_key', 'p3_key']):
+#     for k in keys:
+#         if k not in st.session_state:
+#             st.session_state[k] = ""
 
 
 def reinitialize_session_keys(keys: list = ['uploaded_files', 'filenames', 'pattern1',
@@ -91,6 +100,10 @@ def reinitialize_session_keys(keys: list = ['uploaded_files', 'filenames', 'patt
 def clear_data():
     st.experimental_memo.clear()
     reinitialize_session_keys()
+
+
+def update_input(key: str):
+    st.text(f'pkey {st.session_state[key]}')
 
 # -----------------------------------------
 
@@ -132,17 +145,19 @@ with st.form("form1", clear_on_submit=True):
     submitted1 = st.form_submit_button('Upload')
 
     if submitted1:
+
         reinitialize_session_keys()
         st.session_state['uploaded_files'] = uploaded_files
-        st.session_state['filenames'] = [f.name for f in uploaded_files]
-        st.session_state['files'] = {i: (uploaded_files[i].name, uploaded_files[i].size) for i in range(len(uploaded_files))}
-        st.session_state['df'] = pd.DataFrame(np.zeros((3, 3), dtype=int), columns=["p3", "¬ p3", "total"], index=["p2", "¬ p2", "total"])
 
-        treebank, treebank_idx, sentences, tokens = load_corpora(st.session_state['uploaded_files'])
-        st.session_state['treebank'] = treebank
-        st.session_state['treebank_idx'] = treebank_idx
-        st.session_state['sentences'] = sentences
-        st.session_state['tokens'] = tokens
+        if st.session_state['uploaded_files']:
+            st.session_state['filenames'] = [f.name for f in uploaded_files]
+            st.session_state['files'] = {i: (uploaded_files[i].name, uploaded_files[i].size) for i in range(len(uploaded_files))}
+            st.session_state['df'] = pd.DataFrame(np.zeros((3, 3), dtype=int), columns=["p3", "¬ p3", "total"], index=["p2", "¬ p2", "total"])
+
+            st.session_state['treebank'], treebank_idx, sentences, tokens = load_corpora(st.session_state['uploaded_files'])
+            st.session_state['treebank_idx'] = treebank_idx
+            st.session_state['sentences'] = sentences
+            st.session_state['tokens'] = tokens
 
 if st.session_state['uploaded_files']:
 
@@ -178,8 +193,15 @@ if st.session_state['uploaded_files']:
         col1, col2 = st.columns(2)
         p1 = col1.text_area("Pattern 1", value=st.session_state['pattern1'], height=80)
         p2 = col2.text_area("Pattern 2", value=st.session_state['pattern2'], height=80, help=P1P2_HELP)
+
+        # st.session_state['pattern1'] = col1.text_area("Pattern 1", value=st.session_state['p1_key'], key="p1_key", on_change=update_input("p1_key"),  height=80)
+        # st.session_state['pattern2'] = col2.text_area("Pattern 2", value=st.session_state['p2_key'], key="p2_key", on_change=update_input("p2_key"), height=80, help=P1P2_HELP)
+        # p1 = st.session_state['pattern1']
+        # p2 = st.session_state['pattern2']
+
         p1grew = et.build_GrewPattern(p1)
         p2grew = et.build_GrewPattern(p2)
+
         submitted2 = st.form_submit_button("Match")
 
         for p in (p1, p2):
@@ -189,11 +211,12 @@ if st.session_state['uploaded_files']:
                 st.stop()
 
         if submitted2:
+
             if p1 and p2 and p1 == st.session_state['pattern1'] and p2 == st.session_state['pattern2']:
-                st.info("🔂 Same patterns as before")
+                st.warning("🔂 Same patterns as before")
 
             if p1 and p2:
-                reinitialize_session_keys(keys=['pattern1', 'pattern2', 'pattern3', 'result'])
+                reinitialize_session_keys(keys=['pattern3', 'result'])
                 st.session_state['pattern1'] = p1
                 st.session_state['pattern2'] = p2
 
@@ -234,8 +257,9 @@ if st.session_state['pattern1'] and st.session_state['pattern2']:
         submitted3 = st.form_submit_button("Get results")
 
         if submitted3:
+
             if p3 and p3 == st.session_state['pattern3']:
-                st.info("🔂 Same pattern as before")
+                st.warning("🔂 Same pattern as before")
 
             st.session_state['pattern3'] = p3
             st.session_state['df'][["p3", "¬ p3"]] = np.zeros([3, 2], dtype=int)
