@@ -9,7 +9,7 @@ chosen pattern against others. We use Grew-match query language
 to interrogate the treebanks.
 
 On the basis of three query patterns, we search for the conditions (pattern P3)
-that trigger the linguistic phenomenon expressed by the pattern P2,
+that trigger a linguistic phenomenon expressed (pattern P2),
 in the initial search space (pattern P1). We performed a significance test
 to evaluate the distribution obtained from these three patterns.
 
@@ -60,6 +60,7 @@ For the **pattern {X[upos=ADJ]} without {X[Gender]}**, it will look for:
 
 `X[upos=ADJ]`, `without {X[Gender]}` and `X[upos=ADJ] without {X[Gender]}` patterns
 
+For a series of key **Y.upos; **
 It works also for the AnyFeat key.
 '''
 
