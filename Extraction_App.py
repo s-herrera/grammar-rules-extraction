@@ -86,9 +86,9 @@ def reinitialize_session_keys(keys: list):
         st.session_state[k] = ""
 
 
-def clear_data():
+def clear_data(keys: list):
     st.experimental_memo.clear()
-    reinitialize_session_keys()
+    reinitialize_session_keys(keys)
 
 # -----------------------------------------
 
@@ -356,5 +356,5 @@ with st.sidebar:
     clear = col2.button("Clear all 🗑️")
     st.subheader("")
     if clear:
-        clear_data()
+        clear_data(['uploaded_files', 'pattern1', 'pattern2', 'pattern3', 'result'])
         st.experimental_rerun()
