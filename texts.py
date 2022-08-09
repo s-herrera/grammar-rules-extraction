@@ -52,15 +52,24 @@ The AnyFeat key includes any feature of the chosen node except those selected in
 OPTION_HELP = '''
 **All possible combinations**
 
-For the **pattern {X[upos=NOUN]; X-[subj]->Y}**, it will look for:
+For a normal pattern, it will look for all possibles subpatterns.
 
-`X[upos=NOUN]`, `X-[subj]->Y` and `X[upos=NOUN]; X-[subj]->Y` patterns
+1) **pattern {X[upos=NOUN]; X-[subj]->Y}**:
 
-For the **pattern {X[upos=ADJ]} without {X[Gender]}**, it will look for:
+`X[upos=NOUN]`, `X-[subj]->Y` and `X[upos=NOUN]; X-[subj]->Y`
 
-`X[upos=ADJ]`, `without {X[Gender]}` and `X[upos=ADJ] without {X[Gender]}` patterns
+2) **pattern {X[upos=ADJ]} without {X[Gender]}**
 
-For a series of key **Y.upos; **
+`X[upos=ADJ]`, `without {X[Gender]}` and `X[upos=ADJ] without {X[Gender]}`
+
+For key series, it combines all possible queried values a node has, if they can be combined.
+
+1) Assuming that X is an adjective from French, for the keys **X.Number; X.Gender**, it will look for:
+
+`X[Number=Sing]`, `X[Number=Plur]`, `X[Gender=Masc]`, `X[Gender=Fem]`,
+
+`X[Number=Sing]; X[Gender=Masc]`, `X[Number=Sing]; X[Gender=Fem]`, etc.
+
 It works also for the AnyFeat key.
 '''
 
