@@ -11,6 +11,7 @@ from typing import Dict, Iterable, List, Tuple, Set
 
 import numpy as np
 import grew
+from grew.utils import GrewError
 from scipy.stats import fisher_exact
 
 # -------------- Fonctions --------------
@@ -220,7 +221,7 @@ def get_patterns_info(treebank_idx: int, treebank: Dict, P1 : str) -> List[Dict]
     res = {n : set() for m in matchs for n in m["matching"]["nodes"].keys()}
     for m in matchs:
         for node, idx in m["matching"]["nodes"].items():
-            res[node].update(k for k in treebank[m["sent_id"]][idx].keys() if k not in ("head", "deprel"))
+            res[node].update(k for k in treebank[m["sent_id"]][idx].keys() if k not in ("head", "deprel", "deps"))
     features = {k: sorted(v) for k, v in res.items()}
     return matchs, features
 
@@ -252,7 +253,7 @@ def get_key_predictors(P1: str, P3: str, features: dict) -> Dict[str, list]:
             elif "AnyFeat" in v:
                 node_pat = re.findall(fr"{k}\[.+?\]", P1)
                 node_feats = re.findall(r"\w+(?==\w+)", " ".join(node_pat))
-                key_predictors[k].extend([x for x in features[k] if x not in ("lemma", "form", "CorrectForm", "wordform", "SpaceAfter", "xpos", "Person[psor]", "Number[psor]", *node_feats)])
+                key_predictors[k].extend([x for x in features[k] if x not in ("lemma", "form", "deps", "CorrectForm", "wordform", "SpaceAfter", "xpos", "Person[psor]", "Number[psor]", *node_feats)])
             else:
                 key_predictors[k].append(v)
     return dict(key_predictors)
@@ -320,11 +321,10 @@ def rules_extraction(treebank_idx: int, patterns: Dict, P1: GrewPattern, P2: Gre
         if p_value < 0.01:
             percent_M1M2 = (k/n)*100
             percent_M1M3 = (k/N)*100
-            # BAD solution
-            if n-k == 0:  # ZeroDivisionError
-                probability_ratio = (k/N)/((1)/(M-N))
-            else:
+            try:  # not an ideal solution
                 probability_ratio = (k/N)/((n-k)/(M-N))
+            except ZeroDivisionError:
+                probability_ratio = (k/N)/((1)/(M-N))
 
             result.append([pat, p_value, probability_ratio, percent_M1M2, percent_M1M3])
             tables[pat] = table
