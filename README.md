@@ -76,7 +76,7 @@ pip3 install -U -r requirements.txt
 5. Run the app.
 
 ```python
-python3 -m streamlit run Extraction_App.py
+python3 -m streamlit run Extraction_app.py
 ```
 
 ### Update app

@@ -1,5 +1,3 @@
-
-
 ABOUT = '''
 **Extracting significant patterns from treebanks**
 
@@ -9,7 +7,7 @@ chosen pattern against others. We use Grew-match query language
 to interrogate the treebanks.
 
 On the basis of three query patterns, we search for the conditions (pattern P3)
-that trigger a linguistic phenomenon expressed (pattern P2),
+that trigger a linguistic phenomenon (pattern P2),
 in the initial search space (pattern P1). We performed a significance test
 to evaluate the distribution obtained from these three patterns.
 

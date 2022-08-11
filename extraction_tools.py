@@ -11,7 +11,6 @@ from typing import Dict, Iterable, List, Tuple, Set
 
 import numpy as np
 import grew
-from grew.utils import GrewError
 from scipy.stats import fisher_exact
 
 # -------------- Fonctions --------------
@@ -39,7 +38,7 @@ def conllu_to_dict(path: str) -> Dict:
                     sent_id = line.split("=")[1].strip()
                     trees[sent_id] = {'0': {"form": "None", "lemma": "None", "upos": "None", "xpos": "None", "head": "None", "deprel": "None"}}
             else:
-                token_id, form, lemma, upos, xpos, feats, head, deprel, deps, misc = line.split("\t")
+                token_id, form, lemma, upos, xpos, feats, head, deprel, deps, misc = line.strip().split("\t")
                 if "-" not in token_id:
                     trees[sent_id][token_id] = {"form": form, "lemma": lemma, "upos": upos, 'xpos': xpos, "head": head, "deprel": deprel, "deps": deps}
                     if feats != "_":
