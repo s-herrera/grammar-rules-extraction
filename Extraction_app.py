@@ -64,7 +64,7 @@ def get_aggrid_and_response(df: pd.DataFrame) -> Dict:
     gb.configure_columns(column_names=["% of P1&P2", "% of P1&P3"], type=["numericColumn", "numberColumnFilter", "customNumericFormat"], precision=2)
     go = gb.build()
     grid_response = AgGrid(
-        data=df,
+        dataframe=df,
         gridOptions=go,
         update_mode=GridUpdateMode.SELECTION_CHANGED,
         fit_columns_on_grid_load=True,
