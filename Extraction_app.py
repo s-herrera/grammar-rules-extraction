@@ -74,7 +74,8 @@ def get_aggrid_and_response(df: pd.DataFrame) -> Dict:
         fit_columns_on_grid_load=True,
         theme="streamlit",
         conversion_errors="ignore",
-        try_to_convert_back_to_original_types=False)
+        try_to_convert_back_to_original_types=False,
+        enable_enterprise_modules=False)
     return grid_response
 
 
