@@ -84,9 +84,18 @@ python3 -m streamlit run Extraction_app.py
 ```bash
 git pull
 source .venv/bin/activate
+opam update && opam upgrade grewpy
 pip3 install -U -r requirements.txt
 ```
+### Troubleshooting 
 
+If opam 2 in not available in your favorite package manager, you should be able to install version 2.0.6 with the following commands:
+
+```bash
+wget -q https://github.com/ocaml/opam/releases/download/2.0.6/opam-2.0.6-x86_64-linux
+sudo mv opam-2.0.6-x86_64-linux /usr/local/bin/opam
+sudo chmod a+x /usr/local/bin/opam
+```
 
 ## Contributing
 For any problem or suggestion, posting issues is welcome.

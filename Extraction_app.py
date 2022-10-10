@@ -3,7 +3,11 @@ from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 import grew
 from grew.utils import GrewError
+
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
+
 import numpy as np
 
 import tempfile
@@ -32,10 +36,10 @@ def load_corpora(uploaded_files: list) -> Tuple[Dict, int, int, int]:
                 temp.write(f)
             temp.seek(0)
             treebank_idx = grew.corpus(temp.name)
-            treebank = et.conllu_to_dict(temp.name)
+            treebank, features = et.conllu_to_dict(temp.name)
             sentences, tokens = et.get_corpus_info(treebank)
 
-    return treebank, treebank_idx, sentences, tokens
+    return treebank, treebank_idx, sentences, tokens, features
 
 
 def convert_df(df):
@@ -48,7 +52,7 @@ def convert_df(df):
 
 
 def get_dataframe(lst: list) -> pd.DataFrame:
-    df = pd.DataFrame(lst, columns=["Pattern", "Significance", "Probability ratio", "% of P1&P2", "% of P1&P3"])
+    df = pd.DataFrame(lst, columns=["Pattern", "Significance", "Effect", "% of P1&P2", "% of P1&P3"])
     df['Significance'] = df['Significance'].apply(lambda x: et.format_significance(x))
     df = df.sort_values('Significance', ascending=False)
     return df
@@ -59,12 +63,12 @@ def get_aggrid_and_response(df: pd.DataFrame) -> Dict:
     gb = GridOptionsBuilder.from_dataframe(df)
     gb.configure_selection("single", use_checkbox=True)
     gb.configure_column(field="Significance", type=["numericColumn", "numberColumnFilter"])
-    gb.configure_column(field="Probability ratio", type=["numericColumn", "numberColumnFilter",
+    gb.configure_column(field="Effect", type=["numericColumn", "numberColumnFilter",
                                         "customNumericFormat"], precision=3)
     gb.configure_columns(column_names=["% of P1&P2", "% of P1&P3"], type=["numericColumn", "numberColumnFilter", "customNumericFormat"], precision=2)
     go = gb.build()
     grid_response = AgGrid(
-        dataframe=df,
+        df,
         gridOptions=go,
         update_mode=GridUpdateMode.SELECTION_CHANGED,
         fit_columns_on_grid_load=True,
@@ -111,11 +115,12 @@ css = """
 </style>"""
 st.markdown(css, unsafe_allow_html=True)
 
-st.markdown("# Rules extraction 📐")
+st.markdown("# Rule extraction 📐")
 
 GrewPattern = namedtuple('GrewPattern', 'pattern without global_')
 
 grew.init()
+grew.set_config("sud")
 
 keys = ['uploaded_files', 'filenames', 'pattern1', 'pattern2',
         'pattern3', 'result', 'filenames', 'M', 'n', 'files',
@@ -144,7 +149,8 @@ with st.form("form1", clear_on_submit=True):
             st.session_state['files'] = {i: (uploaded_files[i].name, uploaded_files[i].size) for i in range(len(uploaded_files))}
             st.session_state['df'] = pd.DataFrame(np.zeros((3, 3), dtype=int), columns=["p3", "¬ p3", "total"], index=["p2", "¬ p2", "total"])
 
-            st.session_state['treebank'], treebank_idx, sentences, tokens = load_corpora(st.session_state['uploaded_files'])
+            st.session_state['treebank'], treebank_idx, sentences, tokens, features = load_corpora(st.session_state['uploaded_files'])
+            st.session_state['features'] = features
             st.session_state['treebank_idx'] = treebank_idx
             st.session_state['sentences'] = sentences
             st.session_state['tokens'] = tokens
@@ -179,7 +185,7 @@ if st.session_state['uploaded_files']:
     # Form 2
     with st.form(key="form2"):
 
-        st.subheader("First two querys")
+        st.subheader("First two queries")
         col1, col2 = st.columns(2)
         col1.text_area("Pattern 1", value="", key="p1_key", height=80)
         col2.text_area("Pattern 2", value="", key="p2_key", height=80, help=P1P2_HELP)
@@ -210,7 +216,7 @@ if st.session_state['uploaded_files']:
                 st.session_state['p2grew'] = et.build_GrewPattern(p2)
 
                 try:
-                    matchs, features = et.get_patterns_info(st.session_state['treebank_idx'], st.session_state['treebank'], st.session_state['p1grew'])
+                    matchs, allfeatures = et.get_patterns_info(st.session_state['treebank_idx'], st.session_state['treebank'], st.session_state['p1grew'])
                 except GrewError as e:
                     st.exception(GrewError(e.value))
                     st.stop()
@@ -224,7 +230,7 @@ if st.session_state['uploaded_files']:
                 st.session_state["M"] = M
                 st.session_state["n"] = n
                 st.session_state["matchs"] = matchs
-                st.session_state["features"] = features
+                st.session_state["allfeatures"] = allfeatures
                 st.session_state['df'] = pd.DataFrame(np.zeros((3, 3), dtype=int), columns=["p3", "¬ p3", "total"], index=["p2", "¬ p2", "total"])
 
             else:
@@ -246,7 +252,7 @@ if st.session_state['pattern1'] and st.session_state['pattern2']:
     M = st.session_state['M']
     n = st.session_state['n']
 
-    featsholder.json(st.session_state['features'], expanded=False)
+    featsholder.json(st.session_state['allfeatures'], expanded=False)
 
     st.session_state['df']['total'] = [n, M-n, M]
     tableholder.table(st.session_state['df'])

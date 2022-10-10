@@ -1,5 +1,5 @@
 import streamlit as st
-import pandas as pd
+
 st.set_page_config(
     page_title="Rules extraction", page_icon="📐",
     initial_sidebar_state="expanded",
@@ -69,11 +69,10 @@ Formalization of a grammar rule:
 
     st.markdown("#### Metrics")
     st.markdown(r"""
-Metrics to rank the patterns:
 
 **Significance**: We use the negative exponent of the p-value. If the p-value is equal to 0, we use "Infinity".
 
-**Probability ratio**: $$PR = \frac{\#P1\&P2/\#P1\&P3}{\#P1\&P2/\#P1\&¬P3}$$
+**Odds Ratio**: $$OR = \frac{(\#P2\&P3)(\#¬P2\&¬P3)}{(\#¬P2\&P3)(\#P2\&¬P3)}$$
 """)
 with tab2:
     st.markdown("#### nominal subject-verb inversion ")

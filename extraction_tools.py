@@ -11,7 +11,7 @@ from typing import Dict, Iterable, List, Tuple, Set
 
 import numpy as np
 import grew
-from scipy.stats import fisher_exact
+from scipy.stats import fisher_exact, hmean
 
 # -------------- Fonctions --------------
 
@@ -29,7 +29,10 @@ def conllu_to_dict(path: str) -> Dict:
     """
     with open(path) as f:
         conll = f.read().strip()
+
     trees = {}
+    features = set()
+
     sentences = [x.split("\n") for x in conll.split("\n\n")]
     for sent in sentences:
         for line in sent:
@@ -43,9 +46,10 @@ def conllu_to_dict(path: str) -> Dict:
                     trees[sent_id][token_id] = {"form": form, "lemma": lemma, "upos": upos, 'xpos': xpos, "head": head, "deprel": deprel, "deps": deps}
                     if feats != "_":
                         trees[sent_id][token_id].update(separate_column_values(feats))
+                        features.update([x for x in separate_column_values(feats).keys()])
                     if misc != "_":
                         trees[sent_id][token_id].update(separate_column_values(misc))
-    return trees
+    return trees, features
 
 
 def separate_column_values(s: str) -> Dict:
@@ -221,8 +225,8 @@ def get_patterns_info(treebank_idx: int, treebank: Dict, P1 : str) -> List[Dict]
     for m in matchs:
         for node, idx in m["matching"]["nodes"].items():
             res[node].update(k for k in treebank[m["sent_id"]][idx].keys() if k not in ("head", "deprel", "deps"))
-    features = {k: sorted(v) for k, v in res.items()}
-    return matchs, features
+    allfeatures = {k: sorted(v) for k, v in res.items()}
+    return matchs, allfeatures
 
 
 def compute_fixed_totals(matchs, P1, P2, treebank_idx):
@@ -234,7 +238,7 @@ def compute_fixed_totals(matchs, P1, P2, treebank_idx):
     return M, n
 
 
-def get_key_predictors(P1: str, P3: str, features: dict) -> Dict[str, list]:
+def get_key_predictors(P1: str, P3: str, features: set) -> Dict[str, list]:
     """
     Get node : [key predictors] (key patterns) in a dictionary. The script doesn't accept mixed querys (with and without keys).
     """
@@ -246,13 +250,14 @@ def get_key_predictors(P1: str, P3: str, features: dict) -> Dict[str, list]:
 
         if re.search(r'^.+?\.\w+?$', pat):
             k, v = pat.strip().split(".")
-            if "label" in v:
+            if v in ("label", "1", "2", "deep"):
                 re_match = re.search(fr"{k}\s*:\s*(\w+?)\s*->\s*(\w+?)", P1)
-                key_predictors[re_match.group(2)].append(["deprel", {"head" : re_match.group(1), "dep" : re_match.group(2)}])
+                key_predictors[re_match.group(2)].append(["deprel", {"head" : re_match.group(1), "dep" : re_match.group(2)}, v])
             elif "AnyFeat" in v:
                 node_pat = re.findall(fr"{k}\[.+?\]", P1)
                 node_feats = re.findall(r"\w+(?==\w+)", " ".join(node_pat))
-                key_predictors[k].extend([x for x in features[k] if x not in ("lemma", "form", "deps", "CorrectForm", "wordform", "SpaceAfter", "xpos", "Person[psor]", "Number[psor]", *node_feats)])
+                features.difference_update([*node_feats, "Number[psor]", "Person[psor]", "Gender[psor]", "Clusivity[psor]", "Deixis[psor]"])
+                key_predictors[k].extend([x for x in features])
             else:
                 key_predictors[k].append(v)
     return dict(key_predictors)
@@ -277,10 +282,19 @@ def get_patterns(treebank: Dict, matchs: Dict, P3: str, key_predictors: Dict, op
                 for pred in key_predictors[node]:
                     if isinstance(pred, list):
                         # it's a deprel with head and dep. Create pattern GOV-[deprel]->DEP
-                        pat = f'{pred[1]["head"]}-[{treebank[m["sent_id"]][idx][pred[0]]}]->{node}'
+                        deprel = re.split(r"\:|@", treebank[m["sent_id"]][idx][pred[0]])
+                        if pred[2] == "1":
+                            pat = f'{pred[1]["head"]}-[1={deprel[0]}]->{node}'
+                        elif pred[2] == "2" and ":" in treebank[m["sent_id"]][idx][pred[0]]:
+                            pat = f'{pred[1]["head"]}-[2={deprel[1]}]->{node}'
+                        elif pred[2] == "deep" and "@" in treebank[m["sent_id"]][idx][pred[0]]:
+                            pat = f'{pred[1]["head"]}-[deep={deprel[-1]}]->{node}'
+                        elif pred[2] == "label":
+                            pat = f'{pred[1]["head"]}-[{treebank[m["sent_id"]][idx][pred[0]]}]->{node}'
+                        else:
+                            continue
                         lst.append(pat)
                     elif pred in treebank[m["sent_id"]][idx]:
-                        # pattern Node[feature=value]
                         pat = f'{node}[{pred}="{treebank[m["sent_id"]][idx][pred]}"]'
                         lst.append(pat)
         counter.update([x for x in powerset(lst)])
@@ -300,7 +314,6 @@ def rules_extraction(treebank_idx: int, patterns: Dict, P1: GrewPattern, P2: Gre
 
     result = []
     tables = {}
-
     for i, pat in enumerate(patterns, start=1):
 
         my_bar.progress(i/len(patterns))
@@ -313,20 +326,25 @@ def rules_extraction(treebank_idx: int, patterns: Dict, P1: GrewPattern, P2: Gre
         else:
             P3 = build_GrewPattern(pat)
             N = grew.corpus_count(pattern=grewPattern_to_string(P1, P3), corpus_index=treebank_idx)
-
         k = grew.corpus_count(pattern=grewPattern_to_string(P1, P2, P3), corpus_index=treebank_idx)
         table = np.array([[k, n-k], [N-k, M - (n + N) + k]])
-        _, p_value = fisher_exact(table=table, alternative='greater')
-        if p_value < 0.01:
-            percent_M1M2 = (k/n)*100
-            percent_M1M3 = (k/N)*100
-            try:  # not an ideal solution
-                probability_ratio = (k/N)/((n-k)/(M-N))
-            except ZeroDivisionError:
-                probability_ratio = (k/N)/((1)/(M-N))
+        oddsratio = np.log(((table[0,0]+ 0.5)*(table[1,1]+0.5))/((table[0,1]+ 0.5)*(table[1,0]+0.5)))
+        if oddsratio > 1:
 
-            result.append([pat, p_value, probability_ratio, percent_M1M2, percent_M1M3])
-            tables[pat] = table
+            _, p_value = fisher_exact(table=table, alternative='greater')
+            
+        #Others measures
+        #oddsratio = np.log(((table[0,0]+ 0.5)*(table[1,1]+0.5))/((table[0,1]+ 0.5)*(table[1,0]+0.5)))
+        #pmi = np.log2((k/M)/((n/M)*(N/M)))
+        #zscore = (k - ((N*n)/M)) / np.sqrt(((N*n)/M)*(1-(((N*n)/M)/N)))
+        #h_mean  = hmean([(k/n),(k/N)])
+        #probability_ratio = (k/N)/((n-k)/(M-N))
+
+            if p_value < 0.01:
+                percent_M1M2 = (k/n)*100
+                percent_M1M3 = (k/N)*100
+                result.append([pat, p_value, oddsratio, percent_M1M2, percent_M1M3])
+                tables[pat] = table
 
     end = time.time()
     st.write(f"Time: {round(end - start, 3)}")

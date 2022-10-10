@@ -38,12 +38,12 @@ It is possible to use simple patterns or series of keys.
 
 **Simple pattern:** `pattern {Y[NumType=Ord]}`
 
-**Keys:** `e.label; X.lemma`
+**Keys:** `e.label; e.1; X.lemma`
 
 **Special key:** `X.AnyFeat`
 
-The AnyFeat key includes any feature of the chosen node except those selected in the P1 and those listed below:
-**lemma, form, CorrectForm, wordform, SpaceAfter, xpos, Person[psor], Number[psor]**
+The AnyFeat key includes any feature (but not misc features) of the chosen node except those selected in the P1 and those listed below:
+**Person[psor], Number[psor], Clusivity[psor], Deixis[psor]**
 '''
 
 
