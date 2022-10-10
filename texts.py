@@ -8,7 +8,7 @@ to interrogate the treebanks.
 
 On the basis of three query patterns, we search for the conditions (pattern P3)
 that trigger a linguistic phenomenon (pattern P2),
-in the initial search space (pattern P1). We performed a significance test
+in the initial search space (pattern P1). We performe a significance test
 to evaluate the distribution obtained from these three patterns.
 
 If it is your first time, go through the **tutorial**.
