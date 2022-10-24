@@ -57,6 +57,7 @@ def separate_column_values(s: str) -> Dict:
     It separates values from some columns of conll/conll-u files
     """
     values = [v.split("=") for v in s.split("|")]
+    values = [[re.sub(r"\[(.+?)\]", r"__\1", i[0]), i[1]] for i in values]
     values_dict = {lst[0]: lst[1] for lst in values}
     return values_dict
 
@@ -72,7 +73,10 @@ def get_corpora_name(lst: list) -> str:
         corpora = common_prefix
     else:
         lang_code, corpus, scheme, *_ = re.split(r"-|_|\.", common_prefix)
-        corpora = f"{scheme.upper()}_{code_to_lang[lang_code]}-{corpus.upper()}"
+        try:
+            corpora = f"{scheme.upper()}_{code_to_lang[lang_code]}-{corpus.upper()}"
+        except KeyError:
+            corpora = f"{scheme.upper()}_{lang_code}-{corpus.upper()}"
     return corpora
 
 
@@ -256,7 +260,7 @@ def get_key_predictors(P1: str, P3: str, features: set) -> Dict[str, list]:
             elif "AnyFeat" in v:
                 node_pat = re.findall(fr"{k}\[.+?\]", P1)
                 node_feats = re.findall(r"\w+(?==\w+)", " ".join(node_pat))
-                features.difference_update([*node_feats, "Number[psor]", "Person[psor]", "Gender[psor]", "Clusivity[psor]", "Deixis[psor]"])
+                features.difference_update([*node_feats])
                 key_predictors[k].extend([x for x in features])
             else:
                 key_predictors[k].append(v)
@@ -314,10 +318,10 @@ def rules_extraction(treebank_idx: int, patterns: Dict, P1: GrewPattern, P2: Gre
 
     result = []
     tables = {}
+
     for i, pat in enumerate(patterns, start=1):
 
         my_bar.progress(i/len(patterns))
-
         # if it's a dict it has key pattern, on the contrary, it's a simple pattern
         if isinstance(patterns, dict):
             N = patterns[pat]
