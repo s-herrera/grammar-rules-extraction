@@ -58,7 +58,6 @@ def separate_column_values(s: str) -> Dict:
     """
     values_dict = {}
     if "=" in s:
-        print(s)
         values = [v.split("=") for v in s.split("|")]
         values = [[re.sub(r"\[(.+?)\]", r"__\1", i[0]), i[1]] for i in values]
         values_dict = {lst[0]: lst[1] for lst in values}
