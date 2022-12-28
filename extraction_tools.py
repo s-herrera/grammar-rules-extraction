@@ -52,15 +52,18 @@ def conllu_to_dict(path: str) -> Dict:
     return trees, features
 
 
-def separate_column_values(s: str) -> Dict:
+def separate_column_values(s: str, sent_id: str) -> Dict:
     """
     It separates values from some columns of conll/conll-u files
     """
     values_dict = {}
     if "=" in s:
-        values = [v.split("=") for v in s.split("|")]
-        values = [[re.sub(r"\[(.+?)\]", r"__\1", i[0]), i[1]] for i in values]
-        values_dict = {lst[0]: lst[1] for lst in values}
+        try:
+            values = [v.split("=") for v in s.split("|")]
+            values = [[re.sub(r"\[(.+?)\]", r"__\1", i[0]), i[1]] for i in values]
+            values_dict = {lst[0]: lst[1] for lst in values}
+        except Exception:
+            st.warning(f"The file contains an error in sentence {sent_id} that concerns one of the values of the string '{s}'. These values are ignored.")
     return values_dict
 
 
