@@ -45,10 +45,10 @@ def conllu_to_dict(path: str) -> Dict:
                 if "-" not in token_id:
                     trees[sent_id][token_id] = {"form": form, "lemma": lemma, "upos": upos, 'xpos': xpos, "head": head, "deprel": deprel, "deps": deps}
                     if feats != "_":
-                        trees[sent_id][token_id].update(separate_column_values(feats))
-                        features.update([x for x in separate_column_values(feats).keys()])
+                        trees[sent_id][token_id].update(separate_column_values(feats, sent_id))
+                        features.update([x for x in separate_column_values(feats, sent_id).keys()])
                     if misc != "_":
-                        trees[sent_id][token_id].update(separate_column_values(misc))
+                        trees[sent_id][token_id].update(separate_column_values(misc, sent_id))
     return trees, features
 
 
