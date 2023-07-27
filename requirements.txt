@@ -1,6 +1,6 @@
-grew==0.5.0
+grewpy==0.4.1
 numpy==1.23.3
 pandas==1.5.0
 scipy==1.9.2
-streamlit==1.13.0
+streamlit==1.25.0
 streamlit-aggrid==0.3.3
