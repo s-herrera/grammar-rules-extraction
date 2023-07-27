@@ -1,8 +1,7 @@
 import streamlit as st
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
-import grew
-from grew.utils import GrewError
+from grewpy import grew, Corpus
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -35,11 +34,11 @@ def load_corpora(uploaded_files: list) -> Tuple[Dict, int, int, int]:
                 f = uploaded_file.getvalue().decode("utf-8")
                 temp.write(f)
             temp.seek(0)
-            treebank_idx = grew.corpus(temp.name)
+            corpus = Corpus(temp.name)
             treebank, features = et.conllu_to_dict(temp.name)
             sentences, tokens = et.get_corpus_info(treebank)
 
-    return treebank, treebank_idx, sentences, tokens, features
+    return treebank, corpus, sentences, tokens, features
 
 
 def convert_df(df):
@@ -118,14 +117,12 @@ st.markdown(css, unsafe_allow_html=True)
 
 st.markdown("# Rule extraction 📐")
 
-GrewPattern = namedtuple('GrewPattern', 'pattern without global_')
-
-grew.init()
+# grew.init()
 grew.set_config("sud")
 
 keys = ['uploaded_files', 'filenames', 'pattern1', 'pattern2',
         'pattern3', 'result', 'filenames', 'M', 'n', 'files',
-        'sentences', 'tokens', 'treebanks', 'treebank_idx',
+        'sentences', 'tokens', 'treebanks', 'corpus',
         'p1_key', 'p2_key', 'p3_key', 'df']
 
 initialize_session_keys(keys)
@@ -150,9 +147,9 @@ with st.form("form1", clear_on_submit=True):
             st.session_state['files'] = {i: (uploaded_files[i].name, uploaded_files[i].size) for i in range(len(uploaded_files))}
             st.session_state['df'] = pd.DataFrame(np.zeros((3, 3), dtype=int), columns=["p3", "¬ p3", "total"], index=["p2", "¬ p2", "total"])
 
-            st.session_state['treebank'], treebank_idx, sentences, tokens, features = load_corpora(st.session_state['uploaded_files'])
+            st.session_state['treebank'], corpus, sentences, tokens, features = load_corpora(st.session_state['uploaded_files'])
             st.session_state['features'] = features
-            st.session_state['treebank_idx'] = treebank_idx
+            st.session_state['corpus'] = corpus
             st.session_state['sentences'] = sentences
             st.session_state['tokens'] = tokens
 
@@ -213,19 +210,20 @@ if st.session_state['uploaded_files']:
                 st.session_state['pattern1'] = p1
                 st.session_state['pattern2'] = p2
 
-                st.session_state['p1grew'] = et.build_GrewPattern(p1)
-                st.session_state['p2grew'] = et.build_GrewPattern(p2)
+                # st.session_state['p1grew'] = et.build_GrewPattern(p1)
+                # st.session_state['p1grew'] = p1
+                # st.session_state['p2grew'] = et.build_GrewPattern(p2)
 
                 try:
-                    matchs, allfeatures = et.get_patterns_info(st.session_state['treebank_idx'], st.session_state['treebank'], st.session_state['p1grew'])
-                except GrewError as e:
-                    st.exception(GrewError(e.value))
+                    matchs, allfeatures = et.get_patterns_info(st.session_state['corpus'], st.session_state['treebank'], st.session_state['pattern1'])
+                except grew.GrewError as e:
+                    st.exception(grew.GrewError(e.value))
                     st.stop()
 
                 try:
-                    M, n = et.compute_fixed_totals(matchs, st.session_state['p1grew'], st.session_state['p2grew'], st.session_state['treebank_idx'])
-                except GrewError as e:
-                    st.exception(GrewError(e.value))
+                    M, n = et.compute_fixed_totals(matchs, st.session_state['pattern1'], st.session_state['pattern2'], st.session_state['corpus'])
+                except grew.GrewError as e:
+                    st.exception(grew.GrewError(e.value))
                     st.stop()
 
                 st.session_state["M"] = M
@@ -288,9 +286,9 @@ if st.session_state['pattern1'] and st.session_state['pattern2']:
                 patterns = et.get_patterns(st.session_state['treebank'], st.session_state["matchs"], st.session_state['pattern3'], key_predictors, combination_type)
 
                 try:
-                    result, tables = et.rules_extraction(st.session_state['treebank_idx'], patterns, st.session_state['p1grew'], st.session_state['p2grew'], st.session_state["M"], st.session_state["n"])
-                except GrewError as e:
-                    st.exception(GrewError(e.value))
+                    result, tables = et.rules_extraction(st.session_state['corpus'], patterns, st.session_state['pattern1'], st.session_state['pattern2'], st.session_state["M"], st.session_state["n"])
+                except grew.GrewError as e:
+                    st.exception(grew.GrewError(e.value))
                     st.stop()
 
                 st.session_state['keys'] = bool(key_predictors)
@@ -336,10 +334,10 @@ if st.session_state['pattern1'] and st.session_state['pattern2']:
 
                 # Grew-match link
                 if st.session_state['keys']:
-                    st.session_state['p3grew'] = et.build_GrewPattern(f"pattern {{ {pattern3} }}")
+                    st.session_state['pattern3'] = f"pattern {{ {pattern3} }}"
                 else:
-                    st.session_state['p3grew'] = et.build_GrewPattern(pattern3)
-                link = et.get_GrewMatch_link(st.session_state['filenames'], st.session_state['p1grew'], st.session_state['p2grew'], st.session_state['p3grew'])
+                    st.session_state['pattern3'] = pattern3
+                link = et.get_GrewMatch_link(st.session_state['filenames'], st.session_state['pattern1'], st.session_state['pattern2'], st.session_state['pattern3'])
                 linkholder.markdown(f'🔗 [**Grew-match link**]({link})')
 
             else:

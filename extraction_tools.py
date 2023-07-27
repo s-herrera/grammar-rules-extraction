@@ -10,18 +10,17 @@ from itertools import combinations, chain
 from typing import Dict, Iterable, List, Tuple, Set
 
 import numpy as np
-import grew
+from grewpy import Request
+from grewpy.grs import RequestItem
 from scipy.stats import fisher_exact, hmean
 
 # -------------- Fonctions --------------
 
 
-GrewPattern = namedtuple('GrewPattern', 'pattern without global_')
-
+GrewPattern = namedtuple('GrewPattern', ['pattern', 'without', 'with_', 'global_'])
 
 class PatternError(Exception):
     pass
-
 
 def conllu_to_dict(path: str) -> Dict:
     """
@@ -77,11 +76,11 @@ def get_corpora_name(lst: list) -> str:
     if len(splited) <= 2:
         corpora = common_prefix
     else:
-        lang_code, corpus, scheme, *_ = re.split(r"-|_|\.", common_prefix)
+        lang_code, corpus_name, scheme, *_ = re.split(r"-|_|\.", common_prefix)
         try:
-            corpora = f"{scheme.upper()}_{code_to_lang[lang_code]}-{corpus.upper()}"
+            corpora = f"{scheme.upper()}_{code_to_lang[lang_code]}-{corpus_name.upper()}"
         except KeyError:
-            corpora = f"{scheme.upper()}_{lang_code}-{corpus.upper()}"
+            corpora = f"{scheme.upper()}_{lang_code}-{corpus_name.upper()}"
     return corpora
 
 
@@ -118,53 +117,78 @@ def is_valid_pattern(s: str) -> bool:
         return PatternError("The curly or the square brackets are not balanced")
 
     grew_cmds = [x.split('}')[-1].strip() for x in s.split('{')]
-    matchs = [re.match(r"^(pattern|without|global)$", w) for w in grew_cmds if w]
+    matchs = [re.match(r"^(pattern|without|with|global)$", w) for w in grew_cmds if w]
     if not all(matchs):
-        return PatternError("The Grew commands (pattern, without, global) or the key patterns (e.g. X.upos) are not acceptable")
+        return PatternError("The Grew commands (pattern, without, with, global) or the key patterns (e.g. X.upos) are not acceptable")
 
 
-def build_GrewPattern(s: str) -> GrewPattern:
+# def build_GrewPattern(s: str) -> GrewPattern:
+#     """
+#     """
+#     s = re.sub("\n", "", s)  # erase newlines
+
+#     pattern = [x.strip() for x in re.findall(r"\bpattern\b\s*{(.+?)}", s) if x]
+#     without = [x.strip() for x in re.findall(r"\bwithout\b\s*{(.+?)}", s) if x]
+#     with_ = [x.strip() for x in re.findall(r"\bwith\b\s*{(.+?)}", s) if x]
+#     global_ = [x.strip() for x in re.findall(r"\bglobal\b\s*{(.+?)}", s) if x]
+#     request = GrewPattern(pattern, without, with_, global_)
+#     return request
+
+
+def build_request(s: str) -> Request:
     """
     """
-    s = re.sub("\n", "", s)  # erase newlines
+    s = s.strip()  # erase newlines
 
-    p = [x.strip() for x in re.findall(r"\bpattern\b\s*{(.+?)}", s) if x]
-    w = [x.strip() for x in re.findall(r"\bwithout\b\s*{(.+?)}", s) if x]
-    g = [x.strip() for x in re.findall(r"\bglobal\b\s*{(.+?)}", s) if x]
-    pattern = GrewPattern(p, w, g)
-    return pattern
+    pattern = ";".join([x.strip() for x in re.findall(r"\bpattern\b\s*{(.+?)}", s) if x])
+    request = Request(pattern)
+
+    without = ";".join([x.strip() for x in re.findall(r"\bwithout\b\s*{(.+?)}", s) if x])
+    if without:
+        request.without(without)
+
+    with_ = ";".join([x.strip() for x in re.findall(r"\bwith\b\s*{(.+?)}", s) if x])
+    if with_:
+        request.with_(with_)
+
+    # global_ = ";".join([x.strip() for x in re.findall(r"\bglobal\b\s*{(.+?)}", s) if x])
+    # if global_:
+    #     request.global_(global_)
+
+    return request
 
 
 def grewPattern_to_string(*patterns: GrewPattern) -> str:
     """
     """
-
-    p = f"pattern {{{'; '.join(['; '.join(tpl.pattern) for tpl in patterns if tpl.pattern])}}}"
-    w = " ".join([f"without {{{w}}}" for tpl in patterns for w in tpl.without if w])
-    g = " ".join([f"global {{{g}}}" for tpl in patterns for g in tpl.global_ if g])
-    pattern = p + w + g
-    return pattern
+    pattern = " ".join([f"pattern {{{w}}}" for tpl in patterns for w in tpl.pattern if w])
+    without = " ".join([f"without {{{w}}}" for tpl in patterns for w in tpl.without if w])
+    with_ = " ".join([f"with {{{w}}}" for tpl in patterns for w in tpl.with_ if w])
+    global_ = " ".join([f"global {{{g}}}" for tpl in patterns for g in tpl.global_ if g])
+    request = pattern + without + with_ + global_
+    return request
 
 
 def combine_simple_pattern(pat: str) -> str:
     """
     """
-    p = [y.strip() for x in re.findall(r"pattern\s*{(.+?)}", pat) if x for y in x.split(";")]
-    pwrset_p = [f"pattern {{ {'; '.join(x)} }}" for x in powerset(p) if x]
-    w = [" ".join(x) for x in powerset(re.findall(r"without\s*{.+?}", pat))]
-    g = [" ".join(x) for x in powerset(re.findall(r"global\s*{.+?}", pat))]
+    pattern = [y.strip() for x in re.findall(r"pattern\s*{(.+?)}", pat) if x for y in x.split(";")]
+    pwrset_p = [f"pattern {{ {'; '.join(x)} }}" for x in powerset(pattern) if x]
+    without = [" ".join(x) for x in powerset(re.findall(r"without\s*{.+?}", pat))]
+    with_ = [" ".join(x) for x in powerset(re.findall(r"with\s*{.+?}", pat))]
+    global_ = [" ".join(x) for x in powerset(re.findall(r"global\s*{.+?}", pat))]
 
-    res = set(" ".join(p) for r in range(3) for c in combinations([pwrset_p,w,g], r+1) for p in product(*c) if p)
-    return res
+    request = set(" ".join(p) for r in range(3) for c in combinations([pwrset_p, with_, without, global_], r+1) for p in product(*c) if p)
+    return request
 
 
 def format_simple_pattern(*pattern: str) -> str:
     """
     It formats patterns into Grew valid patterns
     """
-    res = ";".join(pattern)
-    res = f"pattern {{ {res} }}"
-    return res
+    req = ";".join(pattern)
+    req = f"pattern {{ {req} }}"
+    return req
 
 
 def format_significance(p_value: float) -> int:
@@ -183,12 +207,12 @@ def format_significance(p_value: float) -> int:
     return significance
 
 
-def get_GrewMatch_link(filenames: str, p1: GrewPattern, p2: GrewPattern, p3: GrewPattern):
+def get_GrewMatch_link(filenames: str, p1: str, p2: str, p3: str):
 
     corpora = get_corpora_name(filenames)
-    p2whether = re.sub(r"without|pattern|global|{|}", "", grewPattern_to_string(p2))
+    p2whether = re.sub(r"pattern|without|with|global|{|}", "", p2)
     enc_corpus = urllib.parse.quote(corpora.encode('utf8'))
-    enc_pattern = urllib.parse.quote(grewPattern_to_string(p1, p3).encode('utf8'))
+    enc_pattern = urllib.parse.quote(str(p1 + " " + p3).encode('utf8'))
     enc_whether = urllib.parse.quote(p2whether.strip().encode('utf-8'))
     link = f"http://universal.grew.fr/?corpus={enc_corpus}&pattern={enc_pattern}&whether={enc_whether}"
     return link
@@ -225,11 +249,12 @@ def get_corpus_info(treebank: Dict) -> Tuple[int, int]:
     return sentences, tokens
 
 
-def get_patterns_info(treebank_idx: int, treebank: Dict, P1 : str) -> List[Dict] and  Dict[str, Set]:
+def get_patterns_info(corpus, treebank: Dict, P1 : str) -> List[Dict] and  Dict[str, Set]:
     """
     Get P1 matchs and the nodes associated with each of its features.
     """
-    matchs = grew.corpus_search(grewPattern_to_string(P1), treebank_idx)
+    request = build_request(P1)
+    matchs = corpus.search(request)
     res = {n : set() for m in matchs for n in m["matching"]["nodes"].keys()}
     for m in matchs:
         for node, idx in m["matching"]["nodes"].items():
@@ -238,12 +263,15 @@ def get_patterns_info(treebank_idx: int, treebank: Dict, P1 : str) -> List[Dict]
     return matchs, allfeatures
 
 
-def compute_fixed_totals(matchs, P1, P2, treebank_idx):
+def compute_fixed_totals(matchs, P1, P2, corpus):
     """
     Compute fixed totals of a contengcy table. M = P1 occurrences. n = P2 occurrences.
     """
     M = len([m for m in matchs])
-    n = grew.corpus_count(pattern=grewPattern_to_string(P1, P2), corpus_index=treebank_idx)
+    req1 = build_request(P1)
+    req2 = build_request(P2)
+    n = corpus.count(Request(req1, req2))
+
     return M, n
 
 
@@ -315,7 +343,7 @@ def get_patterns(treebank: Dict, matchs: Dict, P3: str, key_predictors: Dict, op
     return patterns
 
 
-def rules_extraction(treebank_idx: int, patterns: Dict, P1: GrewPattern, P2: GrewPattern, M: int, n: int) -> List[List] and Dict:
+def rules_extraction(corpus, patterns: Dict, P1: str, P2: str, M: int, n: int) -> List[List] and Dict:
 
     # streamlit progress bar
     my_bar = st.progress(0.0)
@@ -324,6 +352,10 @@ def rules_extraction(treebank_idx: int, patterns: Dict, P1: GrewPattern, P2: Gre
     result = []
     tables = {}
 
+    req1 = build_request(P1)
+    req2 = build_request(P2)
+
+
     for i, pat in enumerate(patterns, start=1):
 
         my_bar.progress(i/len(patterns))
@@ -331,11 +363,20 @@ def rules_extraction(treebank_idx: int, patterns: Dict, P1: GrewPattern, P2: Gre
         if isinstance(patterns, dict):
             N = patterns[pat]
             pat = '; '.join(pat)
-            P3 = build_GrewPattern(f"pattern {{ {pat} }}")
+
+            req3 = build_request(f"pattern {{ {pat} }}")
+            # P3 = build_GrewPattern(f"pattern {{ {pat} }}")
         else:
-            P3 = build_GrewPattern(pat)
-            N = grew.corpus_count(pattern=grewPattern_to_string(P1, P3), corpus_index=treebank_idx)
-        k = grew.corpus_count(pattern=grewPattern_to_string(P1, P2, P3), corpus_index=treebank_idx)
+            req3 = build_request(pat)
+            # P3 = build_GrewPattern(pat)
+
+# corpus.count(Request("; ".join(P1.pattern + P2.pattern)))
+
+            N = corpus.count((Request(req1, req2)))
+            # N = grew.corpus_count(pattern=grewPattern_to_string(P1, P3), corpus_index=treebank_idx)
+
+        k = corpus.count((Request(req1, req2, req3)))
+        # k = grew.corpus_count(pattern=grewPattern_to_string(P1, P2, P3), corpus_index=treebank_idx)
         table = np.array([[k, n-k], [N-k, M - (n + N) + k]])
         oddsratio = np.log(((table[0,0]+ 0.5)*(table[1,1]+0.5))/((table[0,1]+ 0.5)*(table[1,0]+0.5)))
         if oddsratio > 1:

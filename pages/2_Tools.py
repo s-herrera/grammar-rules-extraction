@@ -14,7 +14,7 @@ css = """
 st.markdown(css, unsafe_allow_html=True)
 
 
-@st.experimental_memo(show_spinner=False, suppress_st_warning=True)
+@st.cache_data
 def load_files(files, _uploaded_files: list):
     """
     Read several files into a string.
