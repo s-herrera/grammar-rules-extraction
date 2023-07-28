@@ -38,7 +38,7 @@ cd grammar-rules-extraction
       opam switch create 4.13.1 4.13.1
       eval $(opam env --switch=4.13.1)
       opam remote add grew "http://opam.grew.fr"
-      opam install grew grewpy
+      opam install grew grewpy_backend
       ```
 
     - **Mac OS X**
@@ -54,14 +54,13 @@ cd grammar-rules-extraction
       opam switch create 4.13.1 4.13.1
       eval $(opam env --switch=4.13.1)
       opam remote add grew "http://opam.grew.fr"
-      opam install grew grewpy
+      opam install grew grewpy_backend
       ```
 
 3. Create a virtual environment in which to run the app.
 
 ```bash
-pip3 install virtualenv
-python3 -m virtualenv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 ```
 
