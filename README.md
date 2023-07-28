@@ -118,4 +118,4 @@ To get the most out of it, we recommend to complement it with the following reso
 
 ## Acknowledgments
 
-Thanks to Sylvain and Bruno
+Thanks to Sylvain, Bruno and Guy.
