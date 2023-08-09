@@ -2,8 +2,6 @@
 
 This is an application to explore and extract significant patterns, potential grammar rules, from treebanks using statistical methods.
 
-The web app : http://139.59.147.134:8501/
-
 ## Description
 
 It allows to query a treebank to statistically compare the distribution of a chosen pattern against others. 
