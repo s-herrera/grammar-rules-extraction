@@ -392,6 +392,7 @@ def rules_extraction(corpus, patterns: Dict, P1: str, P2: str, M: int, n: int) -
         #probability_ratio = (k/N)/((n-k)/(M-N))
 
             if p_value < 0.01:
+                p_value = -np.log10(p_value)
                 percent_M1M2 = (k/n)*100
                 percent_M1M3 = (k/N)*100
                 result.append([pat, p_value, oddsratio, percent_M1M2, percent_M1M3])

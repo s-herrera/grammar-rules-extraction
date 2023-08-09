@@ -69,8 +69,8 @@ def convert_df(df):
 
 
 def get_dataframe(lst: list) -> pd.DataFrame:
-    df = pd.DataFrame(lst, columns=["Pattern", "Significance", "Effect", "% of P1&P2", "% of P1&P3"])
-    df['Significance'] = df['Significance'].apply(lambda x: et.format_significance(x))
+    df = pd.DataFrame(lst, columns=["Pattern", "Significance", "Effect size", "Coverage", "Precision"])
+    # df['Significance'] = df['Significance'].apply(lambda x: et.format_significance(x))
     df = df.sort_values('Significance', ascending=False)
     return df
 
@@ -79,10 +79,10 @@ def get_aggrid_and_response(df: pd.DataFrame) -> Dict:
     df = df.replace(float('inf'), 'Infinity')
     gb = GridOptionsBuilder.from_dataframe(df)
     gb.configure_selection("single", use_checkbox=True)
-    gb.configure_column(field="Significance", type=["numericColumn", "numberColumnFilter"])
-    gb.configure_column(field="Effect", type=["numericColumn", "numberColumnFilter",
-                                        "customNumericFormat"], precision=3)
-    gb.configure_columns(column_names=["% of P1&P2", "% of P1&P3"], type=["numericColumn", "numberColumnFilter", "customNumericFormat"], precision=2)
+    gb.configure_column(field="Significance", type=["numericColumn", "numberColumnFilter", "customNumericFormat"], precision=2)
+    gb.configure_column(field="Effect size", type=["numericColumn", "numberColumnFilter",
+                                        "customNumericFormat"], precision=2)
+    gb.configure_columns(column_names=["Coverage", "Precision"], type=["numericColumn", "numberColumnFilter", "customNumericFormat"], precision=2)
     go = gb.build()
     grid_response = AgGrid(
         df,
