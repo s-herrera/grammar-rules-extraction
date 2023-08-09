@@ -209,9 +209,10 @@ def format_significance(p_value: float) -> int:
 
 def get_GrewMatch_link(filenames: str, p1: str, p2: str, p3: str):
 
-    corpora = get_corpora_name(filenames)
+    # corpora_name = get_corpora_name(filenames)
+    corpora_name = filenames[0]
     p2whether = re.sub(r"pattern|without|with|global|{|}", "", p2)
-    enc_corpus = urllib.parse.quote(corpora.encode('utf8'))
+    enc_corpus = urllib.parse.quote(corpora_name.encode('utf8'))
     enc_pattern = urllib.parse.quote(str(p1 + " " + p3).encode('utf8'))
     enc_whether = urllib.parse.quote(p2whether.strip().encode('utf-8'))
     link = f"http://universal.grew.fr/?corpus={enc_corpus}&pattern={enc_pattern}&whether={enc_whether}"

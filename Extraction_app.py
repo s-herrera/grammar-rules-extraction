@@ -40,6 +40,24 @@ def load_corpora(uploaded_files: list) -> Tuple[Dict, int, int, int]:
 
     return treebank, corpus, sentences, tokens, features
 
+def load_local_corpora(file: str) -> Tuple[Dict, int, int, int]:
+    """
+    Load corpus in a dictionary and by using Grew.
+
+    Return corpora and its number of sentences and tokens.
+    """
+    with st.spinner('Loading treebank...'):
+        # with tempfile.NamedTemporaryFile(mode="wt", encoding="utf-8") as temp:
+        #     for uploaded_file in uploaded_file:
+        #         f = uploaded_file.getvalue().decode("utf-8")
+        #         temp.write(f)
+        #     temp.seek(0)
+        corpus = Corpus(file)
+        treebank, features = et.conllu_to_dict(file)
+        sentences, tokens = et.get_corpus_info(treebank)
+
+    return treebank, corpus, sentences, tokens, features
+
 
 def convert_df(df):
     """
@@ -115,7 +133,7 @@ css = """
 </style>"""
 st.markdown(css, unsafe_allow_html=True)
 
-st.markdown("# Rule extraction 📐")
+st.markdown("# Rule extraction 📐 (demo)")
 
 # grew.init()
 grew.set_config("sud")
@@ -134,20 +152,25 @@ with st.expander('🤏 About the app '):
 
 with st.form("form1", clear_on_submit=True):
 
-    uploaded_files = st.file_uploader("CoNLL/CoNLL-U accepted", type=[".conll", ".conllu"], accept_multiple_files=True)
+    treebanks_options = ['SUD_French-GSD', 'SUD_Basque-BDT', 'SUD_English-GUM', 'SUD_German-HDT', 'SUD_Greek-GDT', 'SUD_Italian-VIT',
+                         'SUD_Polish-PDB', 'SUD_Portuguese-Bosque', 'SUD_Russian-Taiga', 'SUD_Scottish_Gaelic-ARCOSG', 'SUD_Serbian-SET',
+                         'SUD_Swedish-LinES', 'SUD_Vietnamese-VTB']
+    
+    treebanks_options.sort()
+    
+    choice = st.selectbox("Select a treebank", options=treebanks_options, placeholder="Select...")
     submitted1 = st.form_submit_button('Upload')
 
     if submitted1:
-
         reinitialize_session_keys(['uploaded_files', 'filenames', 'files', 'pattern1', 'pattern2', 'pattern3','result'])
-        st.session_state['uploaded_files'] = uploaded_files
+        st.session_state['uploaded_files'] = f"static/data/{choice}.conllu"
 
         if st.session_state['uploaded_files']:
-            st.session_state['filenames'] = [f.name for f in uploaded_files]
-            st.session_state['files'] = {i: (uploaded_files[i].name, uploaded_files[i].size) for i in range(len(uploaded_files))}
+            st.session_state['filenames'] = [choice]
+            # st.session_state['files'] = {i: (uploaded_files[i].name, uploaded_files[i].size) for i in range(len(uploaded_files))}
             st.session_state['df'] = pd.DataFrame(np.zeros((3, 3), dtype=int), columns=["p3", "¬ p3", "total"], index=["p2", "¬ p2", "total"])
 
-            st.session_state['treebank'], corpus, sentences, tokens, features = load_corpora(st.session_state['uploaded_files'])
+            st.session_state['treebank'], corpus, sentences, tokens, features = load_local_corpora(st.session_state['uploaded_files'])
             st.session_state['features'] = features
             st.session_state['corpus'] = corpus
             st.session_state['sentences'] = sentences
