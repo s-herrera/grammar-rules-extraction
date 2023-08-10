@@ -155,11 +155,10 @@ with st.form("form1", clear_on_submit=True):
     treebanks_options = ['SUD_French-GSD', 'SUD_Basque-BDT', 'SUD_English-GUM', 'SUD_German-HDT', 'SUD_Greek-GDT', 'SUD_Italian-VIT',
                          'SUD_Polish-PDB', 'SUD_Portuguese-Bosque', 'SUD_Russian-Taiga', 'SUD_Scottish_Gaelic-ARCOSG', 'SUD_Serbian-SET',
                          'SUD_Swedish-LinES', 'SUD_Vietnamese-VTB']
-    
     treebanks_options.sort()
     
     choice = st.selectbox("Select a treebank", options=treebanks_options, placeholder="Select...")
-    submitted1 = st.form_submit_button('Upload')
+    submitted1 = st.form_submit_button('Load')
 
     if submitted1:
         reinitialize_session_keys(['uploaded_files', 'filenames', 'files', 'pattern1', 'pattern2', 'pattern3','result'])
@@ -190,7 +189,7 @@ if st.session_state['uploaded_files']:
         col2.metric("# Sentences", st.session_state['sentences'])
         col3.metric("# Tokens", st.session_state['tokens'], help="It includes multiword tokens (e.g. n-n+1 indexed tokens)")
 
-    st.sidebar.markdown("#### Nodes features:")
+    st.sidebar.markdown("#### Node features:")
     featsholder = st.sidebar.empty()
 
     nresholder = st.sidebar.empty()

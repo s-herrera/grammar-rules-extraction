@@ -140,6 +140,8 @@ def build_request(s: str) -> Request:
     """
     s = s.strip()  # erase newlines
 
+    request = Request()
+
     pattern = ";".join([x.strip() for x in re.findall(r"\bpattern\b\s*{(.+?)}", s) if x])
     request = Request(pattern)
 
@@ -151,9 +153,9 @@ def build_request(s: str) -> Request:
     if with_:
         request.with_(with_)
 
-    # global_ = ";".join([x.strip() for x in re.findall(r"\bglobal\b\s*{(.+?)}", s) if x])
-    # if global_:
-    #     request.global_(global_)
+    global_ = ";".join([x.strip() for x in re.findall(r"\bglobal\b\s*{(.+?)}", s) if x])
+    if global_:
+        request.global_(global_)
 
     return request
 
@@ -356,7 +358,6 @@ def rules_extraction(corpus, patterns: Dict, P1: str, P2: str, M: int, n: int) -
     req1 = build_request(P1)
     req2 = build_request(P2)
 
-
     for i, pat in enumerate(patterns, start=1):
 
         my_bar.progress(i/len(patterns))
@@ -369,9 +370,10 @@ def rules_extraction(corpus, patterns: Dict, P1: str, P2: str, M: int, n: int) -
             # P3 = build_GrewPattern(f"pattern {{ {pat} }}")
         else:
             req3 = build_request(pat)
+            
             # P3 = build_GrewPattern(pat)
 
-# corpus.count(Request("; ".join(P1.pattern + P2.pattern)))
+            # corpus.count(Request("; ".join(P1.pattern + P2.pattern)))
 
             N = corpus.count((Request(req1, req2)))
             # N = grew.corpus_count(pattern=grewPattern_to_string(P1, P3), corpus_index=treebank_idx)
@@ -379,7 +381,9 @@ def rules_extraction(corpus, patterns: Dict, P1: str, P2: str, M: int, n: int) -
         k = corpus.count((Request(req1, req2, req3)))
         # k = grew.corpus_count(pattern=grewPattern_to_string(P1, P2, P3), corpus_index=treebank_idx)
         table = np.array([[k, n-k], [N-k, M - (n + N) + k]])
-        oddsratio = np.log(((table[0,0]+ 0.5)*(table[1,1]+0.5))/((table[0,1]+ 0.5)*(table[1,0]+0.5)))
+        with np.errstate(divide='ignore'): 
+            oddsratio = np.log(((table[0,0]+ 0.5)*(table[1,1]+0.5))/((table[0,1]+ 0.5)*(table[1,0]+0.5)))
+
         if oddsratio > 1:
 
             _, p_value = fisher_exact(table=table, alternative='greater')
@@ -392,9 +396,10 @@ def rules_extraction(corpus, patterns: Dict, P1: str, P2: str, M: int, n: int) -
         #probability_ratio = (k/N)/((n-k)/(M-N))
 
             if p_value < 0.01:
-                p_value = -np.log10(p_value)
-                percent_M1M2 = (k/n)*100
-                percent_M1M3 = (k/N)*100
+                with np.errstate(divide='ignore'): 
+                    p_value = -np.log10(p_value)
+                    percent_M1M2 = (k/n)*100
+                    percent_M1M3 = (k/N)*100
                 result.append([pat, p_value, oddsratio, percent_M1M2, percent_M1M3])
                 tables[pat] = table
 
