@@ -7,10 +7,13 @@ This is an application to explore and extract significant patterns, potential gr
 This app was developed for Master project.
 
 A newer version has been developed for a LREC-COLING 2025 soumission:
+
 https://github.com/FilippoC/grex-lrec-coling-2024
 
 The latest version of the project can be found here:
+
 grex2: https://github.com/FilippoC/grex2
+
 grex-doc: https://github.com/FilippoC/grex2-doc
 
 ## Description
